@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>排班系統</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- ── Header ─────────────────────────────────────────────────────────── -->
+  <header class="app-header">
+    <div style="display:flex;align-items:center;gap:8px">
+      <h1>排班系統</h1>
+      <span class="header-sub">兩週排班・早班 / 晚班</span>
+    </div>
+  </header>
+
+  <!-- ── Body ───────────────────────────────────────────────────────────── -->
+  <div class="app-body">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+
+      <!-- ─ 排班設定 ─ -->
+      <div class="sidebar-section">
+        <div class="sidebar-title">排班設定</div>
+
+        <div class="date-row">
+          <label for="start-date">排班開始日期</label>
+          <input type="date" id="start-date">
+        </div>
+
+        <div class="settings-grid">
+          <div class="setting-field">
+            <label for="setting-morning-min">早班最少人數</label>
+            <input type="number" id="setting-morning-min" min="1" max="20" value="8">
+          </div>
+          <div class="setting-field">
+            <label for="setting-morning-max">早班最多人數</label>
+            <input type="number" id="setting-morning-max" min="1" max="20" value="9">
+          </div>
+          <div class="setting-field" style="grid-column:span 2">
+            <label for="setting-evening">晚班人數</label>
+            <input type="number" id="setting-evening" min="1" max="20" value="9">
+          </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="generateSchedule()">
+          ⚡ 產生排班
+        </button>
+      </div>
+
+      <!-- ─ 人員管理 ─ -->
+      <div class="sidebar-section">
+        <div class="sidebar-title">
+          人員管理
+          <span id="staff-count" style="color:var(--primary);margin-left:4px">0</span> 人
+        </div>
+
+        <div class="staff-input-row">
+          <input type="text" id="staff-input"
+            placeholder="輸入姓名，Enter 新增"
+            autocomplete="off">
+          <button class="btn btn-secondary btn-sm" onclick="addStaff()">新增</button>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">
+          可貼上多筆，用換行或逗號分隔
+        </div>
+
+        <div class="sidebar-link-row">
+          <button class="link-btn" onclick="importSampleStaff()">載入 45 位範例人員</button>
+          <button class="link-btn danger" onclick="clearAllStaff()">清除全部</button>
+        </div>
+      </div>
+
+      <!-- ─ Staff List ─ -->
+      <div class="sidebar-section">
+        <div id="staff-list" class="staff-list">
+          <p class="sidebar-empty">尚未新增人員</p>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="schedule" onclick="switchTab('schedule')">排班表</button>
+        <button class="tab-btn" data-tab="stats" onclick="switchTab('stats')">人員統計</button>
+      </div>
+
+      <!-- Tab Panels -->
+      <div class="tab-panels">
+
+        <!-- 排班表 -->
+        <div class="tab-panel active" id="tab-schedule">
+          <div class="empty-state">
+            <div class="empty-icon">📅</div>
+            <p>請先新增人員，設定開始日期，然後點擊「產生排班」</p>
+          </div>
+        </div>
+
+        <!-- 統計 -->
+        <div class="tab-panel" id="tab-stats">
+          <div class="empty-state">
+            <div class="empty-icon">📊</div>
+            <p>產生排班後可查看統計</p>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ── Add Staff Modal ─────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="modal-title">新增人員</h3>
+      <button class="btn-modal-close" onclick="closeAddModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-hint">點選人員加入班表（已排班當日者不顯示）</p>
+      <div class="modal-staff-grid" id="modal-staff-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast ──────────────────────────────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<script src="js/scheduler.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
