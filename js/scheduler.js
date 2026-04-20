@@ -1,9 +1,4 @@
 const Scheduler = {
-  /**
-   * Generates a 14-day schedule with fair shift distribution.
-   * No person is assigned both morning and evening on the same day.
-   * People with fewer total shifts are prioritized each day.
-   */
   generate(staff, startDate, options = {}) {
     const {
       days = 14,
@@ -13,12 +8,18 @@ const Scheduler = {
     } = options;
 
     if (!staff || staff.length === 0) throw new Error('請先新增人員');
-    if (staff.length < morningMax + eveningCount) {
-      throw new Error(`人員不足，至少需要 ${morningMax + eveningCount} 人才能排班`);
+
+    const canMorning = staff.filter(s => this._canMorning(s));
+    const canEvening = staff.filter(s => this._canEvening(s));
+    if (canMorning.length < morningMax) {
+      throw new Error(`能上早班的人員不足（目前 ${canMorning.length} 人，至少需要 ${morningMax} 人）`);
+    }
+    if (canEvening.length < eveningCount) {
+      throw new Error(`能上晚班的人員不足（目前 ${canEvening.length} 人，至少需要 ${eveningCount} 人）`);
     }
 
     const counts = {};
-    staff.forEach(s => { counts[s] = { morning: 0, evening: 0, total: 0 }; });
+    staff.forEach(s => { counts[s.name] = { morning: 0, evening: 0, total: 0 }; });
 
     const schedule = [];
     const start = new Date(startDate + 'T00:00:00');
@@ -26,27 +27,34 @@ const Scheduler = {
     for (let i = 0; i < days; i++) {
       const date = new Date(start);
       date.setDate(date.getDate() + i);
+      const dow = date.getDay();
 
-      // Alternate morning size: even days = morningMin, odd days = morningMax
       const morningSize = (i % 2 === 0) ? morningMin : morningMax;
 
-      // Sort staff by total shifts (fewest first), with random tiebreaking within same count
-      const ordered = this._prioritizedOrder(staff, counts);
+      // Filter: can work morning shift AND available this day of week
+      const eligibleMorning = staff.filter(s =>
+        this._canMorning(s) && this._canWork(s, dow)
+      );
+      const orderedMorning = this._prioritizedOrder(eligibleMorning, counts);
+      const morning = orderedMorning.slice(0, Math.min(morningSize, orderedMorning.length));
+      const morningNameSet = new Set(morning.map(s => s.name));
 
-      const morning = ordered.slice(0, morningSize);
-      const morningSet = new Set(morning);
-      const remaining = ordered.filter(s => !morningSet.has(s));
-      const evening = remaining.slice(0, eveningCount);
+      // Filter: can work evening shift AND available AND not already in morning
+      const eligibleEvening = staff.filter(s =>
+        this._canEvening(s) && this._canWork(s, dow) && !morningNameSet.has(s.name)
+      );
+      const orderedEvening = this._prioritizedOrder(eligibleEvening, counts);
+      const evening = orderedEvening.slice(0, Math.min(eveningCount, orderedEvening.length));
 
-      morning.forEach(s => { counts[s].morning++; counts[s].total++; });
-      evening.forEach(s => { counts[s].evening++; counts[s].total++; });
+      morning.forEach(s => { counts[s.name].morning++; counts[s.name].total++; });
+      evening.forEach(s => { counts[s.name].evening++; counts[s.name].total++; });
 
       schedule.push({
         date: this._formatDate(date),
-        dayOfWeek: '日一二三四五六'[date.getDay()],
-        morning: [...morning],
+        dayOfWeek: '日一二三四五六'[dow],
+        morning: morning.map(s => s.name),
         evening: {
-          staff: [...evening],
+          staff: evening.map(s => s.name),
           endTime: '23:00',
         },
       });
@@ -55,19 +63,26 @@ const Scheduler = {
     return schedule;
   },
 
-  // Groups staff by total shift count, then Fisher-Yates shuffles within each group.
-  // This ensures people with equal priority are randomly ordered.
+  _canMorning(s) { return s.shiftType === 'morning' || s.shiftType === 'both'; },
+  _canEvening(s) { return s.shiftType === 'evening' || s.shiftType === 'both'; },
+
+  // availableDays: array of 0-6; empty or length===7 means all days
+  _canWork(s, dow) {
+    if (!s.availableDays || s.availableDays.length === 0 || s.availableDays.length === 7) return true;
+    return s.availableDays.includes(dow);
+  },
+
+  // Group staff by total shift count, Fisher-Yates shuffle within each group
   _prioritizedOrder(staff, counts) {
     const groups = new Map();
     staff.forEach(s => {
-      const t = counts[s].total;
+      const t = counts[s.name].total;
       if (!groups.has(t)) groups.set(t, []);
       groups.get(t).push(s);
     });
 
     const result = [];
-    const sortedKeys = [...groups.keys()].sort((a, b) => a - b);
-    sortedKeys.forEach(k => {
+    [...groups.keys()].sort((a, b) => a - b).forEach(k => {
       const g = groups.get(k);
       for (let i = g.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -88,14 +103,14 @@ const Scheduler = {
 
   getStats(schedule, staff) {
     const stats = {};
-    staff.forEach(s => { stats[s] = { morning: 0, evening: 0, total: 0 }; });
+    staff.forEach(s => { stats[s.name] = { morning: 0, evening: 0, total: 0 }; });
 
     schedule.forEach(day => {
-      day.morning.forEach(s => {
-        if (stats[s]) { stats[s].morning++; stats[s].total++; }
+      day.morning.forEach(name => {
+        if (stats[name]) { stats[name].morning++; stats[name].total++; }
       });
-      day.evening.staff.forEach(s => {
-        if (stats[s]) { stats[s].evening++; stats[s].total++; }
+      day.evening.staff.forEach(name => {
+        if (stats[name]) { stats[name].evening++; stats[name].total++; }
       });
     });
 

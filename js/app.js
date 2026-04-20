@@ -1,15 +1,17 @@
 // ── State ─────────────────────────────────────────────────────────────────────
 const state = {
-  staff: [],
+  staff: [],      // [{ name, shiftType, availableDays }]
   schedule: null,
   startDate: '',
-  settings: {
-    morningMin: 8,
-    morningMax: 9,
-    eveningCount: 9,
-  },
+  settings: { morningMin: 8, morningMax: 9, eveningCount: 9 },
   activeTab: 'schedule',
 };
+
+// Tracks form defaults when adding new staff
+let addFormState = { shiftType: 'both', availableDays: [0, 1, 2, 3, 4, 5, 6] };
+
+// Tracks which staff index is being edited
+let editingIndex = null;
 
 let addModalCtx = { dayIndex: null, shiftType: null };
 
@@ -17,43 +19,70 @@ let addModalCtx = { dayIndex: null, shiftType: null };
 document.addEventListener('DOMContentLoaded', () => {
   loadFromStorage();
 
-  // Default start date: next Monday
-  const stored = state.startDate;
   const el = document.getElementById('start-date');
-  el.value = stored || getNextMonday();
-  if (stored) state.startDate = stored;
-
-  // Settings inputs
+  el.value = state.startDate || getNextMonday();
   document.getElementById('setting-morning-min').value = state.settings.morningMin;
   document.getElementById('setting-morning-max').value = state.settings.morningMax;
-  document.getElementById('setting-evening').value = state.settings.eveningCount;
+  document.getElementById('setting-evening').value    = state.settings.eveningCount;
 
   renderStaff();
   renderSchedule();
   renderStats();
 
-  // Close modal when clicking backdrop
-  document.getElementById('add-modal').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeAddModal();
-  });
-
-  // Enter key in single-name input adds staff
   document.getElementById('staff-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') { e.preventDefault(); addStaff(); }
   });
+  document.getElementById('add-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeAddModal();
+  });
+  document.getElementById('edit-staff-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeEditStaffModal();
+  });
 });
+
+// ── Staff helpers ─────────────────────────────────────────────────────────────
+function makeStaff(name, shiftType, availableDays) {
+  return { name, shiftType, availableDays: [...availableDays] };
+}
+
+function shiftTypeLabel(type) {
+  return { morning: '早班', evening: '晚班', both: '早晚' }[type] || '早晚';
+}
+
+function shiftTypeBadgeClass(type) {
+  return { morning: 'badge-morning', evening: 'badge-evening', both: 'badge-both' }[type] || 'badge-both';
+}
+
+function daysText(days) {
+  if (!days || days.length === 0 || days.length === 7) return '全週';
+  const labels = ['日', '一', '二', '三', '四', '五', '六'];
+  return [...days].sort((a, b) => a - b).map(d => labels[d]).join('');
+}
+
+// ── Add form: shift-type selector ─────────────────────────────────────────────
+function setShiftType(value) {
+  addFormState.shiftType = value;
+  document.querySelectorAll('#shift-type-group .st-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.value === value);
+  });
+}
+
+function getCheckedDays(groupId) {
+  return [...document.querySelectorAll(`#${groupId} input[type="checkbox"]:checked`)]
+    .map(cb => parseInt(cb.value));
+}
 
 // ── Staff Management ──────────────────────────────────────────────────────────
 function addStaff() {
   const raw = document.getElementById('staff-input').value.trim();
   if (!raw) return;
 
-  // Support pasting multiple names separated by newlines, commas, or Chinese commas
+  const days = getCheckedDays('days-group');
   const names = raw.split(/[\n,，、]+/).map(s => s.trim()).filter(Boolean);
   let added = 0;
   names.forEach(name => {
-    if (!state.staff.includes(name)) {
-      state.staff.push(name);
+    if (!state.staff.find(s => s.name === name)) {
+      state.staff.push(makeStaff(name, addFormState.shiftType, days));
       added++;
     }
   });
@@ -90,12 +119,69 @@ function importSampleStaff() {
     '徐建成','馮秀蘭','魏宗達','翁淑貞','范志明','沈美華','孫宗憲','戴雅琪',
     '韓建文','施淑芳','杜志勇','鍾美麗','尤宗祥',
   ];
-  samples.forEach(s => {
-    if (!state.staff.includes(s)) state.staff.push(s);
+  samples.forEach(name => {
+    if (!state.staff.find(s => s.name === name)) {
+      state.staff.push(makeStaff(name, 'both', [0, 1, 2, 3, 4, 5, 6]));
+    }
   });
   persist();
   renderStaff();
   showToast('已載入 45 位範例人員');
+}
+
+// ── Edit Staff Modal ──────────────────────────────────────────────────────────
+function editStaff(index) {
+  editingIndex = index;
+  const s = state.staff[index];
+
+  document.getElementById('edit-name-input').value = s.name;
+
+  // Set shift type buttons
+  document.querySelectorAll('#edit-shift-type-group .st-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.value === s.shiftType);
+  });
+
+  // Set day checkboxes
+  document.querySelectorAll('#edit-days-group input[type="checkbox"]').forEach(cb => {
+    cb.checked = !s.availableDays || s.availableDays.length === 7
+      ? true
+      : s.availableDays.includes(parseInt(cb.value));
+  });
+
+  document.getElementById('edit-staff-modal').classList.add('active');
+}
+
+function setEditShiftType(value) {
+  document.querySelectorAll('#edit-shift-type-group .st-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.value === value);
+  });
+}
+
+function saveEditStaff() {
+  if (editingIndex === null) return;
+
+  const name = document.getElementById('edit-name-input').value.trim();
+  if (!name) { showToast('姓名不能為空', 'error'); return; }
+
+  // Check duplicate name (ignore self)
+  const duplicate = state.staff.findIndex((s, i) => s.name === name && i !== editingIndex);
+  if (duplicate !== -1) { showToast('已有同名人員', 'error'); return; }
+
+  const shiftType = document.querySelector('#edit-shift-type-group .st-btn.active')?.dataset.value || 'both';
+  const availableDays = getCheckedDays('edit-days-group');
+
+  state.staff[editingIndex] = makeStaff(name, shiftType, availableDays);
+  editingIndex = null;
+  closeEditStaffModal();
+  persist();
+  renderStaff();
+  renderStats();
+  showToast('人員設定已更新');
+}
+
+function closeEditStaffModal() {
+  document.getElementById('edit-staff-modal').classList.remove('active');
+  editingIndex = null;
 }
 
 // ── Schedule Generation ───────────────────────────────────────────────────────
@@ -103,9 +189,8 @@ function generateSchedule() {
   const dateVal = document.getElementById('start-date').value;
   if (!dateVal) { showToast('請選擇開始日期', 'error'); return; }
 
-  // Read settings
-  state.settings.morningMin = parseInt(document.getElementById('setting-morning-min').value) || 8;
-  state.settings.morningMax = parseInt(document.getElementById('setting-morning-max').value) || 9;
+  state.settings.morningMin  = parseInt(document.getElementById('setting-morning-min').value) || 8;
+  state.settings.morningMax  = parseInt(document.getElementById('setting-morning-max').value) || 9;
   state.settings.eveningCount = parseInt(document.getElementById('setting-evening').value) || 9;
   state.startDate = dateVal;
 
@@ -153,7 +238,9 @@ function openAddModal(dayIndex, shiftType) {
   addModalCtx = { dayIndex, shiftType };
   const day = state.schedule[dayIndex];
   const assignedToday = new Set([...day.morning, ...day.evening.staff]);
-  const available = state.staff.filter(s => !assignedToday.has(s));
+  const available = state.staff
+    .filter(s => !assignedToday.has(s.name))
+    .filter(s => shiftType === 'morning' ? Scheduler._canMorning(s) : Scheduler._canEvening(s));
 
   const shiftLabel = shiftType === 'morning' ? '早班' : '晚班';
   document.getElementById('modal-title').textContent =
@@ -161,10 +248,10 @@ function openAddModal(dayIndex, shiftType) {
 
   const listEl = document.getElementById('modal-staff-list');
   if (available.length === 0) {
-    listEl.innerHTML = '<p class="modal-empty">今日所有人員均已排班</p>';
+    listEl.innerHTML = '<p class="modal-empty">無可新增的人員</p>';
   } else {
     listEl.innerHTML = available.map(s =>
-      `<button class="modal-staff-btn" onclick="addToShift('${escAttr(s)}')">${escHtml(s)}</button>`
+      `<button class="modal-staff-btn" onclick="addToShift('${escAttr(s.name)}')">${escHtml(s.name)}</button>`
     ).join('');
   }
 
@@ -196,18 +283,15 @@ function exportCSV() {
   const rows = [['日期', '星期', '早班人數', '早班人員', '晚班人數', '晚班人員', '晚班結束時間']];
   state.schedule.forEach(day => {
     rows.push([
-      day.date,
-      day.dayOfWeek,
-      day.morning.length,
-      day.morning.join('、'),
-      day.evening.staff.length,
-      day.evening.staff.join('、'),
+      day.date, day.dayOfWeek,
+      day.morning.length, day.morning.join('、'),
+      day.evening.staff.length, day.evening.staff.join('、'),
       day.evening.endTime,
     ]);
   });
 
   const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\r\n');
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -219,13 +303,11 @@ function exportCSV() {
   showToast('CSV 已下載');
 }
 
-function printSchedule() {
-  window.print();
-}
+function printSchedule() { window.print(); }
 
 // ── Render: Staff List ────────────────────────────────────────────────────────
 function renderStaff() {
-  const listEl = document.getElementById('staff-list');
+  const listEl  = document.getElementById('staff-list');
   const countEl = document.getElementById('staff-count');
   countEl.textContent = state.staff.length;
 
@@ -236,7 +318,10 @@ function renderStaff() {
 
   listEl.innerHTML = state.staff.map((s, i) => `
     <div class="staff-row">
-      <span class="staff-row-name">${escHtml(s)}</span>
+      <span class="staff-row-name">${escHtml(s.name)}</span>
+      <span class="staff-badge ${shiftTypeBadgeClass(s.shiftType)}">${shiftTypeLabel(s.shiftType)}</span>
+      <span class="staff-days-text">${daysText(s.availableDays)}</span>
+      <button class="btn-edit-staff" onclick="editStaff(${i})" title="編輯">✎</button>
       <button class="btn-remove-staff" onclick="removeStaff(${i})" title="移除">×</button>
     </div>
   `).join('');
@@ -328,23 +413,21 @@ function renderStats() {
     return;
   }
 
-  const stats = Scheduler.getStats(state.schedule, state.staff);
-  const totals = state.staff.map(s => stats[s].total);
-  const max = Math.max(...totals);
-  const min = Math.min(...totals);
-  const avg = (totals.reduce((a, b) => a + b, 0) / totals.length).toFixed(1);
+  const stats  = Scheduler.getStats(state.schedule, state.staff);
+  const totals = state.staff.map(s => stats[s.name].total);
+  const max    = Math.max(...totals);
+  const min    = Math.min(...totals);
+  const avg    = (totals.reduce((a, b) => a + b, 0) / totals.length).toFixed(1);
 
-  // Sort by total desc
-  const sorted = [...state.staff].sort((a, b) => stats[b].total - stats[a].total);
+  const sorted = [...state.staff].sort((a, b) => stats[b.name].total - stats[a.name].total);
 
   const rows = sorted.map(s => {
-    const { morning, evening, total } = stats[s];
-    const isMax = total === max;
-    const isMin = total === min;
+    const { morning, evening, total } = stats[s.name];
     const bar = max > 0 ? Math.round((total / max) * 100) : 0;
     return `
-      <tr class="${isMax ? 'stat-max' : isMin ? 'stat-min' : ''}">
-        <td>${escHtml(s)}</td>
+      <tr class="${total === max ? 'stat-max' : total === min ? 'stat-min' : ''}">
+        <td>${escHtml(s.name)}</td>
+        <td class="center"><span class="staff-badge ${shiftTypeBadgeClass(s.shiftType)}">${shiftTypeLabel(s.shiftType)}</span></td>
         <td class="center">${morning}</td>
         <td class="center">${evening}</td>
         <td class="center"><strong>${total}</strong></td>
@@ -356,32 +439,18 @@ function renderStats() {
 
   container.innerHTML = `
     <div class="stats-summary">
-      <div class="stat-card">
-        <span class="stat-label">平均班數</span>
-        <span class="stat-value">${avg}</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-label">最多班數</span>
-        <span class="stat-value stat-value-max">${max}</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-label">最少班數</span>
-        <span class="stat-value stat-value-min">${min}</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-label">總人數</span>
-        <span class="stat-value">${state.staff.length}</span>
-      </div>
+      <div class="stat-card"><span class="stat-label">平均班數</span><span class="stat-value">${avg}</span></div>
+      <div class="stat-card"><span class="stat-label">最多班數</span><span class="stat-value stat-value-max">${max}</span></div>
+      <div class="stat-card"><span class="stat-label">最少班數</span><span class="stat-value stat-value-min">${min}</span></div>
+      <div class="stat-card"><span class="stat-label">總人數</span><span class="stat-value">${state.staff.length}</span></div>
     </div>
     <div class="table-wrap">
       <table class="stats-table">
         <thead>
           <tr>
-            <th>姓名</th>
-            <th class="center">早班</th>
-            <th class="center">晚班</th>
-            <th class="center">總計</th>
-            <th>分佈</th>
+            <th>姓名</th><th class="center">班別</th>
+            <th class="center">早班</th><th class="center">晚班</th>
+            <th class="center">總計</th><th>分佈</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -414,21 +483,25 @@ function persist() {
 
 function loadFromStorage() {
   try {
-    const raw = localStorage.getItem('shopee-schedule-v1');
-    if (!raw) return;
-    const data = JSON.parse(raw);
-    if (Array.isArray(data.staff)) state.staff = data.staff;
-    if (data.schedule) state.schedule = data.schedule;
+    const data = JSON.parse(localStorage.getItem('shopee-schedule-v1') || '{}');
+    if (Array.isArray(data.staff)) {
+      // Migrate old string format to new object format
+      state.staff = data.staff.map(s =>
+        typeof s === 'string'
+          ? makeStaff(s, 'both', [0, 1, 2, 3, 4, 5, 6])
+          : s
+      );
+    }
+    if (data.schedule)  state.schedule  = data.schedule;
     if (data.startDate) state.startDate = data.startDate;
-    if (data.settings) state.settings = { ...state.settings, ...data.settings };
+    if (data.settings)  state.settings  = { ...state.settings, ...data.settings };
   } catch (_) {}
 }
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 function getNextMonday() {
   const d = new Date();
-  const day = d.getDay(); // 0=Sun
-  const diff = day === 0 ? 1 : (8 - day);
+  const diff = d.getDay() === 0 ? 1 : (8 - d.getDay());
   d.setDate(d.getDate() + diff);
   return d.toISOString().split('T')[0];
 }
@@ -440,10 +513,8 @@ function formatDateDisplay(dateStr) {
 
 function escHtml(s) {
   return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 function escAttr(s) {

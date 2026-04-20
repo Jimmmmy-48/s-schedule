@@ -59,12 +59,38 @@
           <span id="staff-count" style="color:var(--primary);margin-left:4px">0</span> 人
         </div>
 
+        <!-- Name input -->
         <div class="staff-input-row">
           <input type="text" id="staff-input"
             placeholder="輸入姓名，Enter 新增"
             autocomplete="off">
           <button class="btn btn-secondary btn-sm" onclick="addStaff()">新增</button>
         </div>
+
+        <!-- Shift type selector -->
+        <div class="form-field">
+          <span class="form-label">班別偏好</span>
+          <div class="shift-type-group" id="shift-type-group">
+            <button class="st-btn active" data-value="both"    onclick="setShiftType('both')">早晚班</button>
+            <button class="st-btn"        data-value="morning" onclick="setShiftType('morning')">僅早班</button>
+            <button class="st-btn"        data-value="evening" onclick="setShiftType('evening')">僅晚班</button>
+          </div>
+        </div>
+
+        <!-- Available days -->
+        <div class="form-field">
+          <span class="form-label">可上班日</span>
+          <div class="days-group" id="days-group">
+            <label class="day-check"><input type="checkbox" value="0" checked><span>日</span></label>
+            <label class="day-check"><input type="checkbox" value="1" checked><span>一</span></label>
+            <label class="day-check"><input type="checkbox" value="2" checked><span>二</span></label>
+            <label class="day-check"><input type="checkbox" value="3" checked><span>三</span></label>
+            <label class="day-check"><input type="checkbox" value="4" checked><span>四</span></label>
+            <label class="day-check"><input type="checkbox" value="5" checked><span>五</span></label>
+            <label class="day-check"><input type="checkbox" value="6" checked><span>六</span></label>
+          </div>
+        </div>
+
         <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">
           可貼上多筆，用換行或逗號分隔
         </div>
@@ -96,7 +122,6 @@
       <!-- Tab Panels -->
       <div class="tab-panels">
 
-        <!-- 排班表 -->
         <div class="tab-panel active" id="tab-schedule">
           <div class="empty-state">
             <div class="empty-icon">📅</div>
@@ -104,7 +129,6 @@
           </div>
         </div>
 
-        <!-- 統計 -->
         <div class="tab-panel" id="tab-stats">
           <div class="empty-state">
             <div class="empty-icon">📊</div>
@@ -117,7 +141,7 @@
   </div>
 </div>
 
-<!-- ── Add Staff Modal ─────────────────────────────────────────────────────── -->
+<!-- ── Add-to-shift Modal ──────────────────────────────────────────────────── -->
 <div class="modal-overlay" id="add-modal">
   <div class="modal-box">
     <div class="modal-header">
@@ -127,6 +151,50 @@
     <div class="modal-body">
       <p class="modal-hint">點選人員加入班表（已排班當日者不顯示）</p>
       <div class="modal-staff-grid" id="modal-staff-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Edit Staff Modal ───────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="edit-staff-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>編輯人員設定</h3>
+      <button class="btn-modal-close" onclick="closeEditStaffModal()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="form-field">
+        <label class="form-label" for="edit-name-input">姓名</label>
+        <input type="text" id="edit-name-input" class="edit-text-input" autocomplete="off">
+      </div>
+
+      <div class="form-field">
+        <span class="form-label">班別偏好</span>
+        <div class="shift-type-group" id="edit-shift-type-group">
+          <button class="st-btn" data-value="both"    onclick="setEditShiftType('both')">早晚班</button>
+          <button class="st-btn" data-value="morning" onclick="setEditShiftType('morning')">僅早班</button>
+          <button class="st-btn" data-value="evening" onclick="setEditShiftType('evening')">僅晚班</button>
+        </div>
+      </div>
+
+      <div class="form-field">
+        <span class="form-label">可上班日</span>
+        <div class="days-group" id="edit-days-group">
+          <label class="day-check"><input type="checkbox" value="0"><span>日</span></label>
+          <label class="day-check"><input type="checkbox" value="1"><span>一</span></label>
+          <label class="day-check"><input type="checkbox" value="2"><span>二</span></label>
+          <label class="day-check"><input type="checkbox" value="3"><span>三</span></label>
+          <label class="day-check"><input type="checkbox" value="4"><span>四</span></label>
+          <label class="day-check"><input type="checkbox" value="5"><span>五</span></label>
+          <label class="day-check"><input type="checkbox" value="6"><span>六</span></label>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeEditStaffModal()">取消</button>
+        <button class="btn btn-primary" style="width:auto;padding:7px 20px" onclick="saveEditStaff()">儲存</button>
+      </div>
     </div>
   </div>
 </div>

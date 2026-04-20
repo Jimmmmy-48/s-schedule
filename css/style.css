@@ -133,19 +133,157 @@ body {
 .link-btn:hover { color: var(--primary-dark); }
 .link-btn.danger { color: var(--danger); }
 
+/* ── Form fields (shift-type + days selectors) ───────────────────────────── */
+.form-field {
+  margin-bottom: 10px;
+}
+.form-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 5px;
+}
+
+/* Segmented shift-type buttons */
+.shift-type-group {
+  display: flex;
+  gap: 4px;
+}
+.st-btn {
+  flex: 1;
+  padding: 5px 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .12s, color .12s, border-color .12s;
+  white-space: nowrap;
+}
+.st-btn:hover { background: #e2e8f0; color: var(--text); }
+.st-btn.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+/* Day-of-week checkboxes */
+.days-group {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.day-check {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+}
+.day-check input[type="checkbox"] { display: none; }
+.day-check span {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--bg);
+  transition: background .12s, color .12s, border-color .12s;
+  cursor: pointer;
+}
+.day-check input[type="checkbox"]:checked + span {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+.day-check:hover span { border-color: var(--primary); }
+
+/* Staff badge (shift type) */
+.staff-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.badge-both    { background: #dbeafe; color: #1d4ed8; }
+.badge-morning { background: var(--morning-bg); color: var(--morning); }
+.badge-evening { background: var(--evening-bg); color: var(--evening); }
+
+/* Available days text in staff list */
+.staff-days-text {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* Edit staff button */
+.btn-edit-staff {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background .1s, color .1s;
+}
+.btn-edit-staff:hover { background: #e0f2fe; color: var(--primary); }
+
+/* Edit staff modal text input */
+.edit-text-input {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  outline: none;
+  transition: border-color .15s;
+}
+.edit-text-input:focus { border-color: var(--primary); }
+
+/* Modal footer (save/cancel row) */
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
 /* Staff rows */
 .staff-list { display: flex; flex-direction: column; gap: 2px; }
 
 .staff-row {
   display: flex;
   align-items: center;
+  gap: 4px;
   padding: 5px 6px;
   border-radius: var(--radius-sm);
   transition: background .1s;
 }
 .staff-row:hover { background: var(--bg); }
 
-.staff-row-name { flex: 1; font-size: 13px; }
+.staff-row-name { flex: 1; font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .btn-remove-staff {
   background: none;
@@ -161,6 +299,7 @@ body {
   border-radius: 50%;
   line-height: 1;
   transition: background .1s, color .1s;
+  flex-shrink: 0;
 }
 .btn-remove-staff:hover { background: #fee2e2; color: var(--danger); }
 
