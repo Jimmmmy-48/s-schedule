@@ -597,6 +597,17 @@ body {
   font-size: 11px;
   font-weight: 600;
 }
+/* Understaffed shift badge */
+.shift-badge.badge-short {
+  background: #fee2e2;
+  color: #dc2626;
+}
+/* Understaffed cell left border */
+.col-shift.shift-short {
+  border-left: 3px solid #fca5a5;
+}
+/* Understaffed row subtle tint */
+.row-short td { background: #fff8f8 !important; }
 
 .tags-wrap {
   display: flex;
@@ -855,8 +866,9 @@ body {
   white-space: nowrap;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-.toast.toast-error { background: var(--danger); }
+.toast.toast-error   { background: var(--danger); }
 .toast.toast-success { background: var(--success); }
+.toast.toast-warning { background: #d97706; }
 
 /* ── Print ───────────────────────────────────────────────────────────────────── */
 @media print {

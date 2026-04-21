@@ -250,7 +250,17 @@ function generateSchedule() {
     renderSchedule();
     renderStats();
     switchTab('schedule');
-    showToast('排班已產生！');
+
+    // Warn if any day is understaffed
+    const { morningMin, eveningCount } = state.settings;
+    const shortDays = state.schedule.filter(d =>
+      d.morning.length < morningMin || d.evening.staff.length < eveningCount
+    ).length;
+    if (shortDays > 0) {
+      showToast(`排班完成，但有 ${shortDays} 天人力不足（紅色標示），請手動補位`, 'warning');
+    } else {
+      showToast('排班已產生！');
+    }
   } catch (e) {
     showToast(e.message, 'error');
   }
@@ -395,8 +405,13 @@ function renderSchedule() {
   const periodStart = formatDateDisplay(state.schedule[0].date);
   const periodEnd   = formatDateDisplay(state.schedule[state.schedule.length - 1].date);
 
+  const { morningMin, eveningCount } = state.settings;
+
   const rows = state.schedule.map((day, i) => {
-    const isWeekend  = day.dayOfWeek === '六' || day.dayOfWeek === '日';
+    const isWeekend    = day.dayOfWeek === '六' || day.dayOfWeek === '日';
+    const morningShort = day.morning.length < morningMin;
+    const eveningShort = day.evening.staff.length < eveningCount;
+
     const morningTags = day.morning.map(s =>
       `<span class="tag tag-morning" onclick="removeFromShift(${i},'morning','${escAttr(s)}')" title="點擊移除">${escHtml(s)}</span>`
     ).join('');
@@ -404,26 +419,37 @@ function renderSchedule() {
       `<span class="tag tag-evening" onclick="removeFromShift(${i},'evening','${escAttr(s)}')" title="點擊移除">${escHtml(s)}</span>`
     ).join('');
 
+    const morningBadge = morningShort
+      ? `<span class="shift-badge badge-short" title="人力不足，需 ${morningMin} 人">${day.morning.length} 人 ⚠ 缺 ${morningMin - day.morning.length}</span>`
+      : `<span class="shift-badge">${day.morning.length} 人</span>`;
+    const eveningBadge = eveningShort
+      ? `<span class="shift-badge badge-short" title="人力不足，需 ${eveningCount} 人">${day.evening.staff.length} 人 ⚠ 缺 ${eveningCount - day.evening.staff.length}</span>`
+      : `<span class="shift-badge">${day.evening.staff.length} 人</span>`;
+
+    const rowClass = [
+      isWeekend ? 'row-weekend' : '',
+      (morningShort || eveningShort) ? 'row-short' : '',
+    ].filter(Boolean).join(' ');
+
     return `
-      <tr class="${isWeekend ? 'row-weekend' : ''}">
+      <tr class="${rowClass}">
         <td class="col-date">
           <span class="dow ${isWeekend ? 'dow-weekend' : ''}">${day.dayOfWeek}</span>
           <span class="date-str">${formatDateDisplay(day.date)}</span>
         </td>
-        <td class="col-shift">
+        <td class="col-shift${morningShort ? ' shift-short' : ''}">
           <div class="shift-label shift-label-morning">
-            早班 08:00–12:00
-            <span class="shift-badge">${day.morning.length} 人</span>
+            早班 08:00–12:00 ${morningBadge}
           </div>
           <div class="tags-wrap">
             ${morningTags}
             <button class="btn-add-tag" onclick="openAddModal(${i},'morning')" title="新增人員">＋</button>
           </div>
         </td>
-        <td class="col-shift">
+        <td class="col-shift${eveningShort ? ' shift-short' : ''}">
           <div class="shift-label shift-label-evening">
             晚班 18:00–<button class="btn-endtime" onclick="toggleEndTime(${i})" title="點擊切換結束時間">${day.evening.endTime}</button>
-            <span class="shift-badge">${day.evening.staff.length} 人</span>
+            ${eveningBadge}
           </div>
           <div class="tags-wrap">
             ${eveningTags}
