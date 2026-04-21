@@ -43,7 +43,34 @@ const Scheduler = {
       });
     }
 
+    // Assign stores to each day's staff if stores are provided
+    const stores = options.stores || [];
+    if (stores.length > 0) {
+      schedule.forEach(day => {
+        day.storeAssignments = {
+          morning: this._distribute(day.morning, stores),
+          evening: this._distribute(day.evening.staff, stores),
+        };
+      });
+    }
+
     return schedule;
+  },
+
+  // Distribute stores as evenly as possible among staffNames.
+  // Returns { name: [storeA, storeB, ...], ... }
+  _distribute(staffNames, stores) {
+    if (!staffNames.length || !stores.length) return {};
+    const base  = Math.floor(stores.length / staffNames.length);
+    const extra = stores.length % staffNames.length;
+    const result = {};
+    let idx = 0;
+    staffNames.forEach((name, i) => {
+      const count = base + (i < extra ? 1 : 0);
+      result[name] = stores.slice(idx, idx + count);
+      idx += count;
+    });
+    return result;
   },
 
   // dayShifts keys are day offsets (0–13); value: 'both'|'morning'|'evening'

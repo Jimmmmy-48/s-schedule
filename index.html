@@ -89,6 +89,44 @@
         </div>
       </div>
 
+      <!-- ─ 店家設定 ─ -->
+      <div class="sidebar-section">
+        <div class="sidebar-title">店家設定</div>
+
+        <div class="settings-grid">
+          <div class="setting-field" style="grid-column:span 2">
+            <label for="setting-store-count">店家總數</label>
+            <input type="number" id="setting-store-count" min="1" max="500" value="28"
+              oninput="updateStoreCalc()">
+          </div>
+          <div class="setting-field">
+            <label for="setting-stores-per-morning">早班每人負責</label>
+            <input type="number" id="setting-stores-per-morning" min="1" max="50" value="3"
+              oninput="updateStoreCalc()">
+          </div>
+          <div class="setting-field">
+            <label for="setting-stores-per-evening">晚班每人負責</label>
+            <input type="number" id="setting-stores-per-evening" min="1" max="50" value="2"
+              oninput="updateStoreCalc()">
+          </div>
+        </div>
+
+        <div class="store-calc-block">
+          <div class="store-calc-row">
+            建議早班人數：<strong id="calc-morning-count">10</strong> 人
+          </div>
+          <div class="store-calc-row">
+            建議晚班人數：<strong id="calc-evening-count">14</strong> 人
+          </div>
+          <button class="btn btn-secondary btn-sm" style="margin-top:8px;width:100%"
+            onclick="applyStoreCounts()">套用建議人數至排班設定</button>
+        </div>
+
+        <div class="sidebar-link-row" style="margin-top:8px">
+          <button class="link-btn" onclick="openStoreNamesModal()">自訂店名</button>
+        </div>
+      </div>
+
       <!-- ─ Staff List ─ -->
       <div class="sidebar-section">
         <div id="staff-list" class="staff-list">
@@ -103,7 +141,8 @@
 
       <div class="tabs">
         <button class="tab-btn active" data-tab="schedule" onclick="switchTab('schedule')">排班表</button>
-        <button class="tab-btn" data-tab="stats" onclick="switchTab('stats')">人員統計</button>
+        <button class="tab-btn" data-tab="stores"   onclick="switchTab('stores')">店家分配</button>
+        <button class="tab-btn" data-tab="stats"    onclick="switchTab('stats')">人員統計</button>
       </div>
 
       <div class="tab-panels">
@@ -112,6 +151,14 @@
           <div class="empty-state">
             <div class="empty-icon">📅</div>
             <p>請先新增人員，設定開始日期，然後點擊「產生排班」</p>
+          </div>
+        </div>
+
+        <!-- 店家分配 -->
+        <div class="tab-panel" id="tab-stores">
+          <div class="empty-state">
+            <div class="empty-icon">🏪</div>
+            <p>產生排班後可查看店家分配</p>
           </div>
         </div>
 
@@ -185,6 +232,27 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeEditStaffModal()">取消</button>
         <button class="btn btn-primary" style="width:auto;padding:7px 20px" onclick="saveEditStaff()">儲存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Store Names Modal ──────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="store-names-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>自訂店名</h3>
+      <button class="btn-modal-close" onclick="closeStoreNamesModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-hint">每行一個店名，共 <strong id="store-names-count">0</strong> 家</p>
+      <textarea id="store-names-textarea" class="store-names-ta"
+        placeholder="店1&#10;店2&#10;店3&#10;..."
+        rows="12"
+        oninput="updateStoreNamesCount()"></textarea>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeStoreNamesModal()">取消</button>
+        <button class="btn btn-primary" style="width:auto;padding:7px 20px" onclick="saveStoreNames()">儲存</button>
       </div>
     </div>
   </div>

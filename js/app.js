@@ -4,6 +4,12 @@ const state = {
   schedule: null,
   startDate: '',
   settings: { morningMin: 8, morningMax: 9, eveningCount: 9 },
+  storeSettings: {
+    count: 28,
+    storesPerMorning: 3,
+    storesPerEvening: 2,
+    customNames: [],      // empty = auto-generate '店1'~'店N'
+  },
   activeTab: 'schedule',
 };
 
@@ -24,8 +30,15 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('setting-morning-max').value = state.settings.morningMax;
   document.getElementById('setting-evening').value     = state.settings.eveningCount;
 
+  // Store settings
+  document.getElementById('setting-store-count').value          = state.storeSettings.count;
+  document.getElementById('setting-stores-per-morning').value   = state.storeSettings.storesPerMorning;
+  document.getElementById('setting-stores-per-evening').value   = state.storeSettings.storesPerEvening;
+  updateStoreCalc();
+
   renderStaff();
   renderSchedule();
+  renderStoreAssignment();
   renderStats();
 
   document.getElementById('staff-input').addEventListener('keydown', e => {
@@ -36,6 +49,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('edit-staff-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeEditStaffModal();
+  });
+  document.getElementById('store-names-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeStoreNamesModal();
   });
 });
 
@@ -245,9 +261,13 @@ function generateSchedule() {
   state.startDate = dateVal;
 
   try {
-    state.schedule = Scheduler.generate(state.staff, dateVal, state.settings);
+    state.schedule = Scheduler.generate(state.staff, dateVal, {
+      ...state.settings,
+      stores: getStoreNames(),
+    });
     persist();
     renderSchedule();
+    renderStoreAssignment();
     renderStats();
     switchTab('schedule');
 
@@ -271,6 +291,7 @@ function clearSchedule() {
   state.schedule = null;
   persist();
   renderSchedule();
+  renderStoreAssignment();
   renderStats();
 }
 
@@ -552,6 +573,7 @@ function persist() {
     localStorage.setItem('shopee-schedule-v1', JSON.stringify({
       staff: state.staff, schedule: state.schedule,
       startDate: state.startDate, settings: state.settings,
+      storeSettings: state.storeSettings,
     }));
   } catch (_) {}
 }
@@ -575,10 +597,149 @@ function loadFromStorage() {
         return s;
       });
     }
-    if (data.schedule)  state.schedule  = data.schedule;
-    if (data.startDate) state.startDate = data.startDate;
-    if (data.settings)  state.settings  = { ...state.settings, ...data.settings };
+    if (data.schedule)      state.schedule      = data.schedule;
+    if (data.startDate)     state.startDate     = data.startDate;
+    if (data.settings)      state.settings      = { ...state.settings, ...data.settings };
+    if (data.storeSettings) state.storeSettings = { ...state.storeSettings, ...data.storeSettings };
   } catch (_) {}
+}
+
+// ── Store Management ──────────────────────────────────────────────────────────
+function getStoreNames() {
+  const { count, customNames } = state.storeSettings;
+  if (customNames && customNames.length > 0) {
+    // Pad or trim to match count
+    if (customNames.length >= count) return customNames.slice(0, count);
+    const extra = Array.from({ length: count - customNames.length }, (_, i) => `店${customNames.length + i + 1}`);
+    return [...customNames, ...extra];
+  }
+  return Array.from({ length: count }, (_, i) => `店${i + 1}`);
+}
+
+function updateStoreCalc() {
+  const count    = parseInt(document.getElementById('setting-store-count').value) || 0;
+  const perMorn  = parseInt(document.getElementById('setting-stores-per-morning').value) || 1;
+  const perEve   = parseInt(document.getElementById('setting-stores-per-evening').value) || 1;
+
+  state.storeSettings.count            = count;
+  state.storeSettings.storesPerMorning = perMorn;
+  state.storeSettings.storesPerEvening = perEve;
+
+  const needMorn = count > 0 ? Math.ceil(count / perMorn) : '–';
+  const needEve  = count > 0 ? Math.ceil(count / perEve)  : '–';
+
+  document.getElementById('calc-morning-count').textContent = needMorn;
+  document.getElementById('calc-evening-count').textContent = needEve;
+  persist();
+}
+
+function applyStoreCounts() {
+  const needMorn = parseInt(document.getElementById('calc-morning-count').textContent);
+  const needEve  = parseInt(document.getElementById('calc-evening-count').textContent);
+  if (isNaN(needMorn) || isNaN(needEve)) return;
+
+  document.getElementById('setting-morning-min').value = needMorn;
+  document.getElementById('setting-morning-max').value = needMorn;
+  document.getElementById('setting-evening').value     = needEve;
+  showToast(`已套用：早班 ${needMorn} 人，晚班 ${needEve} 人`);
+}
+
+// Store Names Modal
+function openStoreNamesModal() {
+  const ta = document.getElementById('store-names-textarea');
+  ta.value = getStoreNames().join('\n');
+  updateStoreNamesCount();
+  document.getElementById('store-names-modal').classList.add('active');
+}
+
+function updateStoreNamesCount() {
+  const ta    = document.getElementById('store-names-textarea');
+  const names = ta.value.split('\n').map(s => s.trim()).filter(Boolean);
+  document.getElementById('store-names-count').textContent = names.length;
+}
+
+function saveStoreNames() {
+  const ta    = document.getElementById('store-names-textarea');
+  const names = ta.value.split('\n').map(s => s.trim()).filter(Boolean);
+  if (names.length === 0) { showToast('請輸入至少一個店名', 'error'); return; }
+
+  state.storeSettings.customNames = names;
+  state.storeSettings.count       = names.length;
+  document.getElementById('setting-store-count').value = names.length;
+  updateStoreCalc();
+  closeStoreNamesModal();
+  persist();
+  showToast(`已儲存 ${names.length} 個店名`);
+}
+
+function closeStoreNamesModal() {
+  document.getElementById('store-names-modal').classList.remove('active');
+}
+
+// ── Render: Store Assignment Tab ──────────────────────────────────────────────
+function renderStoreAssignment() {
+  const container = document.getElementById('tab-stores');
+  if (!container) return;
+
+  if (!state.schedule || !state.schedule[0]?.storeAssignments) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🏪</div>
+        <p>產生排班後可查看店家分配</p>
+      </div>`;
+    return;
+  }
+
+  const { storesPerMorning, storesPerEvening } = state.storeSettings;
+  const allStores = getStoreNames();
+
+  const blocks = state.schedule.map((day, i) => {
+    const isWeekend   = day.dayOfWeek === '六' || day.dayOfWeek === '日';
+    const assignments = day.storeAssignments || { morning: {}, evening: {} };
+
+    function buildRows(assignMap, target) {
+      const entries = Object.entries(assignMap);
+      if (!entries.length) return '<tr><td colspan="3" class="store-no-staff">無排班人員</td></tr>';
+      return entries.map(([name, stores]) => {
+        const over = stores.length > target;
+        return `<tr class="${over ? 'store-overload' : ''}">
+          <td class="sa-person">${escHtml(name)}</td>
+          <td class="sa-stores">${stores.map(s => `<span class="store-chip">${escHtml(s)}</span>`).join('')}</td>
+          <td class="sa-count ${over ? 'overload-count' : ''}">${stores.length}家${over ? ' ⚠' : ''}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    // Check for uncovered stores
+    const coveredMorn = new Set(Object.values(assignments.morning).flat());
+    const coveredEve  = new Set(Object.values(assignments.evening).flat());
+    const uncovMorn   = allStores.filter(s => !coveredMorn.has(s));
+    const uncovEve    = allStores.filter(s => !coveredEve.has(s));
+
+    return `
+      <div class="store-day-block${isWeekend ? ' store-weekend' : ''}">
+        <div class="store-day-header">
+          <span class="dow${isWeekend ? ' dow-weekend' : ''}">${day.dayOfWeek}</span>
+          <strong>${formatDateDisplay(day.date)}</strong>
+          <span class="store-day-info">早 ${day.morning.length}人 / 晚 ${day.evening.staff.length}人</span>
+        </div>
+
+        <div class="store-shifts-grid">
+          <div class="store-shift-col">
+            <div class="store-col-title morning-title">早班（目標 ${storesPerMorning} 家/人，共 ${allStores.length} 家）</div>
+            <table class="sa-table"><tbody>${buildRows(assignments.morning, storesPerMorning)}</tbody></table>
+            ${uncovMorn.length ? `<div class="uncovered-warn">⚠ 未覆蓋 ${uncovMorn.length} 家：${uncovMorn.map(s => escHtml(s)).join('、')}</div>` : ''}
+          </div>
+          <div class="store-shift-col">
+            <div class="store-col-title evening-title">晚班（目標 ${storesPerEvening} 家/人，共 ${allStores.length} 家）</div>
+            <table class="sa-table"><tbody>${buildRows(assignments.evening, storesPerEvening)}</tbody></table>
+            ${uncovEve.length ? `<div class="uncovered-warn">⚠ 未覆蓋 ${uncovEve.length} 家：${uncovEve.map(s => escHtml(s)).join('、')}</div>` : ''}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  container.innerHTML = blocks;
 }
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
