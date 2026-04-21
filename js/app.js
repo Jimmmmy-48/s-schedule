@@ -1,24 +1,28 @@
 // ── State ─────────────────────────────────────────────────────────────────────
 const state = {
-  staff: [],      // [{ name, shiftType, availableDates }]
+  staff: [],      // [{ name, dayShifts }]  dayShifts: { [offset]: 'both'|'morning'|'evening' }
   schedule: null,
   startDate: '',
   settings: { morningMin: 8, morningMax: 9, eveningCount: 9 },
   activeTab: 'schedule',
 };
 
-let addFormShiftType = 'both';   // current shift-type selection in the add form
-let editingIndex     = null;     // index of staff being edited
+let addFormShiftType = 'both';  // default shift for newly added staff (applied to all 14 days)
+let editingIndex     = null;
 let addModalCtx      = { dayIndex: null, shiftType: null };
+
+// Cycle order for each date-button click
+const SHIFT_CYCLE  = { both: 'morning', morning: 'evening', evening: null };
+const SHIFT_LABELS = { both: '早晚', morning: '早', evening: '晚' };
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   loadFromStorage();
 
-  document.getElementById('start-date').value            = state.startDate || getNextMonday();
-  document.getElementById('setting-morning-min').value   = state.settings.morningMin;
-  document.getElementById('setting-morning-max').value   = state.settings.morningMax;
-  document.getElementById('setting-evening').value       = state.settings.eveningCount;
+  document.getElementById('start-date').value          = state.startDate || getNextMonday();
+  document.getElementById('setting-morning-min').value = state.settings.morningMin;
+  document.getElementById('setting-morning-max').value = state.settings.morningMax;
+  document.getElementById('setting-evening').value     = state.settings.eveningCount;
 
   renderStaff();
   renderSchedule();
@@ -36,24 +40,35 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ── Staff helpers ─────────────────────────────────────────────────────────────
-function makeStaff(name, shiftType, availableDates = []) {
-  return { name, shiftType, availableDates: [...availableDates] };
+function makeStaff(name, dayShifts) {
+  return { name, dayShifts: { ...(dayShifts || {}) } };
 }
 
-function shiftTypeLabel(type) {
-  return { morning: '早班', evening: '晚班', both: '早晚' }[type] || '早晚';
+// Build a dayShifts object where all 14 days are set to the same shiftType
+function makeUniformDayShifts(shiftType = 'both') {
+  const shifts = {};
+  for (let i = 0; i < 14; i++) shifts[i] = shiftType;
+  return shifts;
 }
 
-function shiftTypeBadgeClass(type) {
-  return { morning: 'badge-morning', evening: 'badge-evening', both: 'badge-both' }[type] || 'badge-both';
+function daysAvailableText(dayShifts) {
+  if (!dayShifts) return '全 14 天';
+  const entries = Object.values(dayShifts);
+  const count   = entries.length;
+  if (count === 0) return '無可上班日';
+  if (count === 14 && entries.every(v => v === 'both')) return '全 14 天';
+
+  const b = entries.filter(v => v === 'both').length;
+  const m = entries.filter(v => v === 'morning').length;
+  const e = entries.filter(v => v === 'evening').length;
+  const parts = [];
+  if (b) parts.push(`早晚×${b}`);
+  if (m) parts.push(`早×${m}`);
+  if (e) parts.push(`晚×${e}`);
+  return `${count}天 (${parts.join(' ')})`;
 }
 
-function daysAvailableText(dates) {
-  if (!dates || dates.length === 0) return '全 14 天';
-  return `${dates.length} / 14 天`;
-}
-
-// ── Add form: shift-type ──────────────────────────────────────────────────────
+// ── Add form: default shift type ──────────────────────────────────────────────
 function setShiftType(value) {
   addFormShiftType = value;
   document.querySelectorAll('#shift-type-group .st-btn').forEach(btn => {
@@ -70,8 +85,7 @@ function addStaff() {
   let added = 0;
   names.forEach(name => {
     if (!state.staff.find(s => s.name === name)) {
-      // Default: available all 14 days (empty array)
-      state.staff.push(makeStaff(name, addFormShiftType, []));
+      state.staff.push(makeStaff(name, makeUniformDayShifts(addFormShiftType)));
       added++;
     }
   });
@@ -110,7 +124,7 @@ function importSampleStaff() {
   ];
   samples.forEach(name => {
     if (!state.staff.find(s => s.name === name)) {
-      state.staff.push(makeStaff(name, 'both', []));
+      state.staff.push(makeStaff(name, makeUniformDayShifts('both')));
     }
   });
   persist();
@@ -124,64 +138,70 @@ function editStaff(index) {
   const s = state.staff[index];
 
   document.getElementById('edit-name-input').value = s.name;
-
-  document.querySelectorAll('#edit-shift-type-group .st-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.value === s.shiftType);
-  });
-
-  renderDateGrid(s.availableDates || []);
+  renderDateGrid(s.dayShifts || {});
 
   document.getElementById('edit-staff-modal').classList.add('active');
 }
 
-function renderDateGrid(availableDates) {
+function renderDateGrid(dayShifts) {
   const container = document.getElementById('edit-dates-grid');
   const startVal  = document.getElementById('start-date').value;
-  const allAvail  = !availableDates || availableDates.length === 0;
-
   const DOW = '日一二三四五六';
-  let html = '';
 
+  let html = '';
   for (let i = 0; i < 14; i++) {
-    let topLine, botLine;
+    const shift = dayShifts[i] ?? null;
+
+    let dateStr, dowStr;
     if (startVal) {
       const d = new Date(startVal + 'T00:00:00');
       d.setDate(d.getDate() + i);
-      topLine = `${d.getMonth() + 1}/${d.getDate()}`;
-      botLine = DOW[d.getDay()];
+      dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
+      dowStr  = DOW[d.getDay()];
     } else {
-      topLine = `第 ${i + 1}`;
-      botLine = '天';
+      dateStr = `第${i + 1}天`;
+      dowStr  = '';
     }
 
-    const active  = allAvail || availableDates.includes(i);
-    const weekGap = i === 7 ? ' week-gap' : '';
+    const shiftAttr  = shift ? `data-shift="${shift}"` : '';
+    const shiftLabel = shift ? SHIFT_LABELS[shift] : '✕';
+    const gapClass   = i === 7 ? ' week-gap' : '';
 
-    html += `<button class="date-btn${active ? ' active' : ''}${weekGap}"
-      data-offset="${i}" onclick="toggleDateBtn(this)">
-      <span class="date-btn-top">${topLine}</span>
-      <span class="date-btn-bot">${botLine}</span>
+    html += `<button class="date-btn${gapClass}" data-offset="${i}" ${shiftAttr} onclick="cycleShiftBtn(this)">
+      <span class="date-btn-top">${dateStr}</span>
+      <span class="date-btn-dow">${dowStr}</span>
+      <span class="date-btn-shift">${shiftLabel}</span>
     </button>`;
   }
 
   container.innerHTML = html;
 }
 
-function toggleDateBtn(btn) {
-  btn.classList.toggle('active');
+// Click cycles: both → morning → evening → unavailable → both
+function cycleShiftBtn(btn) {
+  const current = btn.dataset.shift || null;
+  const next    = current === null ? 'both' : (SHIFT_CYCLE[current] ?? null);
+  applyShiftState(btn, next);
 }
 
-function selectAllDates() {
-  document.querySelectorAll('#edit-dates-grid .date-btn').forEach(btn => btn.classList.add('active'));
+function applyShiftState(btn, shift) {
+  if (shift) {
+    btn.dataset.shift = shift;
+  } else {
+    delete btn.dataset.shift;
+  }
+  btn.querySelector('.date-btn-shift').textContent = shift ? SHIFT_LABELS[shift] : '✕';
+}
+
+function selectAllDates(shiftType = 'both') {
+  document.querySelectorAll('#edit-dates-grid .date-btn').forEach(btn => {
+    applyShiftState(btn, shiftType);
+  });
 }
 
 function clearAllDates() {
-  document.querySelectorAll('#edit-dates-grid .date-btn').forEach(btn => btn.classList.remove('active'));
-}
-
-function setEditShiftType(value) {
-  document.querySelectorAll('#edit-shift-type-group .st-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.value === value);
+  document.querySelectorAll('#edit-dates-grid .date-btn').forEach(btn => {
+    applyShiftState(btn, null);
   });
 }
 
@@ -194,14 +214,13 @@ function saveEditStaff() {
   const duplicate = state.staff.findIndex((s, i) => s.name === name && i !== editingIndex);
   if (duplicate !== -1) { showToast('已有同名人員', 'error'); return; }
 
-  const shiftType = document.querySelector('#edit-shift-type-group .st-btn.active')?.dataset.value || 'both';
+  const dayShifts = {};
+  document.querySelectorAll('#edit-dates-grid .date-btn').forEach(btn => {
+    const shift = btn.dataset.shift;
+    if (shift) dayShifts[parseInt(btn.dataset.offset)] = shift;
+  });
 
-  const selectedOffsets = [...document.querySelectorAll('#edit-dates-grid .date-btn.active')]
-    .map(btn => parseInt(btn.dataset.offset));
-  // If all 14 selected, store as empty (= all available)
-  const availableDates = selectedOffsets.length === 14 ? [] : selectedOffsets;
-
-  state.staff[editingIndex] = makeStaff(name, shiftType, availableDates);
+  state.staff[editingIndex] = makeStaff(name, dayShifts);
   editingIndex = null;
   closeEditStaffModal();
   persist();
@@ -269,9 +288,14 @@ function openAddModal(dayIndex, shiftType) {
   addModalCtx = { dayIndex, shiftType };
   const day = state.schedule[dayIndex];
   const assignedToday = new Set([...day.morning, ...day.evening.staff]);
-  const available = state.staff
-    .filter(s => !assignedToday.has(s.name))
-    .filter(s => shiftType === 'morning' ? Scheduler._canMorning(s) : Scheduler._canEvening(s));
+
+  // Only show staff who have the right preference for day dayIndex
+  const available = state.staff.filter(s => {
+    if (assignedToday.has(s.name)) return false;
+    return shiftType === 'morning'
+      ? Scheduler._canMorning(s, dayIndex)
+      : Scheduler._canEvening(s, dayIndex);
+  });
 
   const shiftLabel = shiftType === 'morning' ? '早班' : '晚班';
   document.getElementById('modal-title').textContent =
@@ -348,8 +372,7 @@ function renderStaff() {
   listEl.innerHTML = state.staff.map((s, i) => `
     <div class="staff-row">
       <span class="staff-row-name">${escHtml(s.name)}</span>
-      <span class="staff-badge ${shiftTypeBadgeClass(s.shiftType)}">${shiftTypeLabel(s.shiftType)}</span>
-      <span class="staff-days-text">${daysAvailableText(s.availableDates)}</span>
+      <span class="staff-days-text">${daysAvailableText(s.dayShifts)}</span>
       <button class="btn-edit-staff" onclick="editStaff(${i})" title="編輯">✎</button>
       <button class="btn-remove-staff" onclick="removeStaff(${i})" title="移除">×</button>
     </div>
@@ -456,7 +479,6 @@ function renderStats() {
     return `
       <tr class="${total === max ? 'stat-max' : total === min ? 'stat-min' : ''}">
         <td>${escHtml(s.name)}</td>
-        <td class="center"><span class="staff-badge ${shiftTypeBadgeClass(s.shiftType)}">${shiftTypeLabel(s.shiftType)}</span></td>
         <td class="center">${morning}</td>
         <td class="center">${evening}</td>
         <td class="center"><strong>${total}</strong></td>
@@ -477,7 +499,7 @@ function renderStats() {
       <table class="stats-table">
         <thead>
           <tr>
-            <th>姓名</th><th class="center">班別</th>
+            <th>姓名</th>
             <th class="center">早班</th><th class="center">晚班</th>
             <th class="center">總計</th><th>分佈</th>
           </tr>
@@ -502,10 +524,8 @@ function switchTab(tab) {
 function persist() {
   try {
     localStorage.setItem('shopee-schedule-v1', JSON.stringify({
-      staff: state.staff,
-      schedule: state.schedule,
-      startDate: state.startDate,
-      settings: state.settings,
+      staff: state.staff, schedule: state.schedule,
+      startDate: state.startDate, settings: state.settings,
     }));
   } catch (_) {}
 }
@@ -515,11 +535,16 @@ function loadFromStorage() {
     const data = JSON.parse(localStorage.getItem('shopee-schedule-v1') || '{}');
     if (Array.isArray(data.staff)) {
       state.staff = data.staff.map(s => {
-        if (typeof s === 'string') return makeStaff(s, 'both', []);
-        // Migrate old availableDays (day-of-week) format → availableDates (period offsets)
-        // Cannot accurately convert, so default to all-available.
-        if (s.availableDays !== undefined && s.availableDates === undefined) {
-          return makeStaff(s.name, s.shiftType || 'both', []);
+        if (typeof s === 'string') return makeStaff(s, makeUniformDayShifts('both'));
+        // Migrate: old format had shiftType + availableDates
+        if (!s.dayShifts) {
+          const shiftType = s.shiftType || 'both';
+          const dates = (s.availableDates && s.availableDates.length > 0)
+            ? s.availableDates
+            : Array.from({ length: 14 }, (_, i) => i);
+          const dayShifts = {};
+          dates.forEach(d => { dayShifts[d] = shiftType; });
+          return makeStaff(s.name, dayShifts);
         }
         return s;
       });

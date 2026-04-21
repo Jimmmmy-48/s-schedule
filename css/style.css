@@ -172,27 +172,58 @@ body {
   border-color: var(--primary);
 }
 
-/* 14-date grid in edit modal */
+/* ── Per-day shift-type grid ─────────────────────────────────────────────── */
 .dates-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 6px;
+  flex-wrap: wrap;
+  gap: 6px;
 }
-.dates-actions { display: flex; gap: 10px; }
-.dates-hint {
-  font-size: 11px;
-  color: var(--text-muted);
+.dates-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Legend */
+.date-grid-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 8px;
-  min-height: 16px;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+.legend-both    { background: var(--primary-light); color: var(--primary);  border-color: var(--primary); }
+.legend-morning { background: var(--morning-bg);    color: var(--morning);  border-color: var(--morning-border); }
+.legend-evening { background: var(--evening-bg);    color: var(--evening);  border-color: var(--evening-border); }
+.legend-off     { background: #f1f5f9; color: #94a3b8; border-color: #e2e8f0; }
+.legend-hint    { font-size: 11px; color: var(--text-muted); margin-left: 4px; }
+
+/* Week labels below grid */
+.dates-week-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  padding: 0 2px;
 }
 
+/* 7-column date grid */
 .date-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 5px;
 }
 
+/* Base state: unavailable (grey/white) */
 .date-btn {
   display: flex;
   flex-direction: column;
@@ -200,27 +231,45 @@ body {
   justify-content: center;
   gap: 1px;
   padding: 6px 2px;
-  border: 1px solid var(--border);
+  border: 1px solid #e2e8f0;
   border-radius: var(--radius-sm);
-  background: var(--bg);
-  color: var(--text-muted);
+  background: #f8fafc;
+  color: #94a3b8;
   cursor: pointer;
-  transition: background .12s, color .12s, border-color .12s;
+  transition: border-color .12s, background .12s, color .12s;
   line-height: 1.2;
+  user-select: none;
 }
-.date-btn:hover { border-color: var(--primary); color: var(--primary); }
-.date-btn.active {
-  background: var(--primary);
-  color: #fff;
-  border-color: var(--primary);
-}
-/* Visual separator between week 1 and week 2 */
-.date-btn.week-gap { margin-top: 0; }
-.date-grid .date-btn:nth-child(8) { border-top: 2px solid var(--border); }
-.date-btn.active.week-gap { }
+.date-btn:hover { border-color: #94a3b8; }
 
-.date-btn-top { font-size: 11px; font-weight: 600; }
-.date-btn-bot { font-size: 10px; opacity: .75; }
+/* Both shifts */
+.date-btn[data-shift="both"] {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.date-btn[data-shift="both"] .date-btn-shift { font-weight: 700; }
+
+/* Morning only */
+.date-btn[data-shift="morning"] {
+  background: var(--morning-bg);
+  border-color: var(--morning-border);
+  color: var(--morning);
+}
+
+/* Evening only */
+.date-btn[data-shift="evening"] {
+  background: var(--evening-bg);
+  border-color: var(--evening-border);
+  color: var(--evening);
+}
+
+/* Week gap: extra top margin between row 1 and row 2 */
+.date-grid .date-btn.week-gap { margin-top: 4px; }
+
+.date-btn-top   { font-size: 11px; font-weight: 600; }
+.date-btn-dow   { font-size: 10px; opacity: .7; }
+.date-btn-shift { font-size: 11px; font-weight: 700; margin-top: 1px; }
 
 /* Staff badge (shift type) */
 .staff-badge {

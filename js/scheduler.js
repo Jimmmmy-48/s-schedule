@@ -9,15 +9,6 @@ const Scheduler = {
 
     if (!staff || staff.length === 0) throw new Error('請先新增人員');
 
-    const canMorning = staff.filter(s => this._canMorning(s));
-    const canEvening = staff.filter(s => this._canEvening(s));
-    if (canMorning.length < morningMax) {
-      throw new Error(`能上早班的人員不足（目前 ${canMorning.length} 人，至少需要 ${morningMax} 人）`);
-    }
-    if (canEvening.length < eveningCount) {
-      throw new Error(`能上晚班的人員不足（目前 ${canEvening.length} 人，至少需要 ${eveningCount} 人）`);
-    }
-
     const counts = {};
     staff.forEach(s => { counts[s.name] = { morning: 0, evening: 0, total: 0 }; });
 
@@ -27,23 +18,19 @@ const Scheduler = {
     for (let i = 0; i < days; i++) {
       const date = new Date(start);
       date.setDate(date.getDate() + i);
-
       const morningSize = (i % 2 === 0) ? morningMin : morningMax;
 
-      // Filter: can work morning AND available on day i of the period
-      const eligibleMorning = staff.filter(s =>
-        this._canMorning(s) && this._canWorkDay(s, i)
-      );
-      const orderedMorning = this._prioritizedOrder(eligibleMorning, counts);
-      const morning = orderedMorning.slice(0, Math.min(morningSize, orderedMorning.length));
-      const morningNameSet = new Set(morning.map(s => s.name));
+      // Use each person's per-day shift preference for day i
+      const eligibleMorning = staff.filter(s => this._canMorning(s, i));
+      const orderedMorning  = this._prioritizedOrder(eligibleMorning, counts);
+      const morning         = orderedMorning.slice(0, Math.min(morningSize, orderedMorning.length));
+      const morningNameSet  = new Set(morning.map(s => s.name));
 
-      // Filter: can work evening AND available on day i AND not already in morning
       const eligibleEvening = staff.filter(s =>
-        this._canEvening(s) && this._canWorkDay(s, i) && !morningNameSet.has(s.name)
+        this._canEvening(s, i) && !morningNameSet.has(s.name)
       );
       const orderedEvening = this._prioritizedOrder(eligibleEvening, counts);
-      const evening = orderedEvening.slice(0, Math.min(eveningCount, orderedEvening.length));
+      const evening        = orderedEvening.slice(0, Math.min(eveningCount, orderedEvening.length));
 
       morning.forEach(s => { counts[s.name].morning++; counts[s.name].total++; });
       evening.forEach(s => { counts[s.name].evening++; counts[s.name].total++; });
@@ -52,24 +39,22 @@ const Scheduler = {
         date: this._formatDate(date),
         dayOfWeek: '日一二三四五六'[date.getDay()],
         morning: morning.map(s => s.name),
-        evening: {
-          staff: evening.map(s => s.name),
-          endTime: '23:00',
-        },
+        evening: { staff: evening.map(s => s.name), endTime: '23:00' },
       });
     }
 
     return schedule;
   },
 
-  _canMorning(s) { return s.shiftType === 'morning' || s.shiftType === 'both'; },
-  _canEvening(s) { return s.shiftType === 'evening' || s.shiftType === 'both'; },
-
-  // availableDates: array of day offsets 0–13 within the period.
-  // Empty array means the person is available all 14 days.
-  _canWorkDay(s, dayOffset) {
-    if (!s.availableDates || s.availableDates.length === 0) return true;
-    return s.availableDates.includes(dayOffset);
+  // dayShifts keys are day offsets (0–13); value: 'both'|'morning'|'evening'
+  // A missing key means the person is not available that day.
+  _canMorning(s, dayOffset) {
+    const pref = s.dayShifts?.[dayOffset];
+    return pref === 'morning' || pref === 'both';
+  },
+  _canEvening(s, dayOffset) {
+    const pref = s.dayShifts?.[dayOffset];
+    return pref === 'evening' || pref === 'both';
   },
 
   _prioritizedOrder(staff, counts) {
@@ -89,7 +74,6 @@ const Scheduler = {
       }
       result.push(...g);
     });
-
     return result;
   },
 
