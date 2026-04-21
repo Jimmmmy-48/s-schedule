@@ -77,20 +77,9 @@
           </div>
         </div>
 
-        <!-- Available days -->
-        <div class="form-field">
-          <span class="form-label">可上班日</span>
-          <div class="days-group" id="days-group">
-            <label class="day-check"><input type="checkbox" value="0" checked><span>日</span></label>
-            <label class="day-check"><input type="checkbox" value="1" checked><span>一</span></label>
-            <label class="day-check"><input type="checkbox" value="2" checked><span>二</span></label>
-            <label class="day-check"><input type="checkbox" value="3" checked><span>三</span></label>
-            <label class="day-check"><input type="checkbox" value="4" checked><span>四</span></label>
-            <label class="day-check"><input type="checkbox" value="5" checked><span>五</span></label>
-            <label class="day-check"><input type="checkbox" value="6" checked><span>六</span></label>
-          </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">
+          可上班日期請新增後點擊 ✎ 設定
         </div>
-
         <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">
           可貼上多筆，用換行或逗號分隔
         </div>
@@ -157,7 +146,7 @@
 
 <!-- ── Edit Staff Modal ───────────────────────────────────────────────────── -->
 <div class="modal-overlay" id="edit-staff-modal">
-  <div class="modal-box">
+  <div class="modal-box modal-box-wide">
     <div class="modal-header">
       <h3>編輯人員設定</h3>
       <button class="btn-modal-close" onclick="closeEditStaffModal()">×</button>
@@ -179,16 +168,15 @@
       </div>
 
       <div class="form-field">
-        <span class="form-label">可上班日</span>
-        <div class="days-group" id="edit-days-group">
-          <label class="day-check"><input type="checkbox" value="0"><span>日</span></label>
-          <label class="day-check"><input type="checkbox" value="1"><span>一</span></label>
-          <label class="day-check"><input type="checkbox" value="2"><span>二</span></label>
-          <label class="day-check"><input type="checkbox" value="3"><span>三</span></label>
-          <label class="day-check"><input type="checkbox" value="4"><span>四</span></label>
-          <label class="day-check"><input type="checkbox" value="5"><span>五</span></label>
-          <label class="day-check"><input type="checkbox" value="6"><span>六</span></label>
+        <div class="dates-header">
+          <span class="form-label" style="margin:0">可上班日期</span>
+          <div class="dates-actions">
+            <button class="link-btn" onclick="selectAllDates()">全選</button>
+            <button class="link-btn danger" onclick="clearAllDates()">全部取消</button>
+          </div>
         </div>
+        <p class="dates-hint" id="dates-hint"></p>
+        <div class="date-grid" id="edit-dates-grid"></div>
       </div>
 
       <div class="modal-footer">

@@ -172,41 +172,55 @@ body {
   border-color: var(--primary);
 }
 
-/* Day-of-week checkboxes */
-.days-group {
+/* 14-date grid in edit modal */
+.dates-header {
   display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
 }
-.day-check {
+.dates-actions { display: flex; gap: 10px; }
+.dates-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  min-height: 16px;
+}
+
+.date-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+
+.date-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  cursor: pointer;
-}
-.day-check input[type="checkbox"] { display: none; }
-.day-check span {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
   justify-content: center;
+  gap: 1px;
+  padding: 6px 2px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-muted);
   background: var(--bg);
-  transition: background .12s, color .12s, border-color .12s;
+  color: var(--text-muted);
   cursor: pointer;
+  transition: background .12s, color .12s, border-color .12s;
+  line-height: 1.2;
 }
-.day-check input[type="checkbox"]:checked + span {
+.date-btn:hover { border-color: var(--primary); color: var(--primary); }
+.date-btn.active {
   background: var(--primary);
   color: #fff;
   border-color: var(--primary);
 }
-.day-check:hover span { border-color: var(--primary); }
+/* Visual separator between week 1 and week 2 */
+.date-btn.week-gap { margin-top: 0; }
+.date-grid .date-btn:nth-child(8) { border-top: 2px solid var(--border); }
+.date-btn.active.week-gap { }
+
+.date-btn-top { font-size: 11px; font-weight: 600; }
+.date-btn-bot { font-size: 10px; opacity: .75; }
 
 /* Staff badge (shift type) */
 .staff-badge {
@@ -704,6 +718,7 @@ body {
   transition: transform .2s;
 }
 .modal-overlay.active .modal-box { transform: translateY(0); }
+.modal-box-wide { width: 500px; }
 
 .modal-header {
   padding: 14px 18px;

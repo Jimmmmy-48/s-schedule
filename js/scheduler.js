@@ -27,21 +27,20 @@ const Scheduler = {
     for (let i = 0; i < days; i++) {
       const date = new Date(start);
       date.setDate(date.getDate() + i);
-      const dow = date.getDay();
 
       const morningSize = (i % 2 === 0) ? morningMin : morningMax;
 
-      // Filter: can work morning shift AND available this day of week
+      // Filter: can work morning AND available on day i of the period
       const eligibleMorning = staff.filter(s =>
-        this._canMorning(s) && this._canWork(s, dow)
+        this._canMorning(s) && this._canWorkDay(s, i)
       );
       const orderedMorning = this._prioritizedOrder(eligibleMorning, counts);
       const morning = orderedMorning.slice(0, Math.min(morningSize, orderedMorning.length));
       const morningNameSet = new Set(morning.map(s => s.name));
 
-      // Filter: can work evening shift AND available AND not already in morning
+      // Filter: can work evening AND available on day i AND not already in morning
       const eligibleEvening = staff.filter(s =>
-        this._canEvening(s) && this._canWork(s, dow) && !morningNameSet.has(s.name)
+        this._canEvening(s) && this._canWorkDay(s, i) && !morningNameSet.has(s.name)
       );
       const orderedEvening = this._prioritizedOrder(eligibleEvening, counts);
       const evening = orderedEvening.slice(0, Math.min(eveningCount, orderedEvening.length));
@@ -51,7 +50,7 @@ const Scheduler = {
 
       schedule.push({
         date: this._formatDate(date),
-        dayOfWeek: '日一二三四五六'[dow],
+        dayOfWeek: '日一二三四五六'[date.getDay()],
         morning: morning.map(s => s.name),
         evening: {
           staff: evening.map(s => s.name),
@@ -66,13 +65,13 @@ const Scheduler = {
   _canMorning(s) { return s.shiftType === 'morning' || s.shiftType === 'both'; },
   _canEvening(s) { return s.shiftType === 'evening' || s.shiftType === 'both'; },
 
-  // availableDays: array of 0-6; empty or length===7 means all days
-  _canWork(s, dow) {
-    if (!s.availableDays || s.availableDays.length === 0 || s.availableDays.length === 7) return true;
-    return s.availableDays.includes(dow);
+  // availableDates: array of day offsets 0–13 within the period.
+  // Empty array means the person is available all 14 days.
+  _canWorkDay(s, dayOffset) {
+    if (!s.availableDates || s.availableDates.length === 0) return true;
+    return s.availableDates.includes(dayOffset);
   },
 
-  // Group staff by total shift count, Fisher-Yates shuffle within each group
   _prioritizedOrder(staff, counts) {
     const groups = new Map();
     staff.forEach(s => {
