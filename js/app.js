@@ -439,10 +439,12 @@ function renderStaff() {
 
   listEl.innerHTML = state.staff.map((s, i) => `
     <div class="staff-row">
-      <span class="staff-row-name">${escHtml(s.name)}</span>
+      <div class="staff-row-main">
+        <span class="staff-row-name">${escHtml(s.name)}</span>
+        <button class="btn-edit-staff" onclick="editStaff(${i})" title="編輯">✎</button>
+        <button class="btn-remove-staff" onclick="removeStaff(${i})" title="移除">×</button>
+      </div>
       <span class="staff-days-text">${daysAvailableText(s.dayShifts)}</span>
-      <button class="btn-edit-staff" onclick="editStaff(${i})" title="編輯">✎</button>
-      <button class="btn-remove-staff" onclick="removeStaff(${i})" title="移除">×</button>
     </div>
   `).join('');
 }

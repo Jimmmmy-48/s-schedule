@@ -70,9 +70,7 @@ body {
   min-width: 280px;
   background: var(--surface);
   border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .sidebar-section {
@@ -80,7 +78,7 @@ body {
   border-bottom: 1px solid var(--border);
 }
 
-.sidebar-section:last-child { flex: 1; overflow-y: auto; }
+.sidebar-section:last-child { border-bottom: none; }
 
 .sidebar-title {
   font-size: 11px;
@@ -286,14 +284,6 @@ body {
 .badge-morning { background: var(--morning-bg); color: var(--morning); }
 .badge-evening { background: var(--evening-bg); color: var(--evening); }
 
-/* Available days text in staff list */
-.staff-days-text {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin: 0 4px;
-  flex-shrink: 0;
-}
-
 /* Edit staff button */
 .btn-edit-staff {
   background: none;
@@ -338,15 +328,36 @@ body {
 
 .staff-row {
   display: flex;
-  align-items: center;
-  gap: 4px;
+  flex-direction: column;
   padding: 5px 6px;
   border-radius: var(--radius-sm);
   transition: background .1s;
 }
 .staff-row:hover { background: var(--bg); }
 
-.staff-row-name { flex: 1; font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.staff-row-main {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.staff-row-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Available days text in staff list — now on second line */
+.staff-days-text {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding-left: 2px;
+  margin-top: 1px;
+}
 
 .btn-remove-staff {
   background: none;
