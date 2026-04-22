@@ -5,6 +5,8 @@ const Scheduler = {
       morningMin = 8,
       morningMax = 9,
       eveningCount = 9,
+      morningRoutes = null,
+      eveningRoutes = null,
     } = options;
 
     if (!staff || staff.length === 0) throw new Error('請先新增人員');
@@ -43,14 +45,28 @@ const Scheduler = {
       });
     }
 
-    // Assign stores to each day's staff if stores are provided
     const stores = options.stores || [];
     if (stores.length > 0) {
       schedule.forEach(day => {
-        day.storeAssignments = {
-          morning: this._distribute(day.morning, stores),
-          evening: this._distribute(day.evening.staff, stores),
-        };
+        if (morningRoutes || eveningRoutes) {
+          const mResult = morningRoutes
+            ? this._distributeWithRoutes(day.morning, morningRoutes, stores)
+            : { assignments: this._distribute(day.morning, stores), routeInfo: {} };
+          const eResult = eveningRoutes
+            ? this._distributeWithRoutes(day.evening.staff, eveningRoutes, stores)
+            : { assignments: this._distribute(day.evening.staff, stores), routeInfo: {} };
+          day.storeAssignments = {
+            morning: mResult.assignments,
+            evening: eResult.assignments,
+            morningRouteInfo: mResult.routeInfo,
+            eveningRouteInfo: eResult.routeInfo,
+          };
+        } else {
+          day.storeAssignments = {
+            morning: this._distribute(day.morning, stores),
+            evening: this._distribute(day.evening.staff, stores),
+          };
+        }
       });
     }
 
@@ -71,6 +87,62 @@ const Scheduler = {
       idx += count;
     });
     return result;
+  },
+
+  _distributeWithRoutes(staffNames, routes, allStores) {
+    if (!staffNames.length) return { assignments: {}, routeInfo: {} };
+
+    const n = staffNames.length;
+    const r = routes.length;
+
+    const routeStoreSet = new Set(routes.flatMap(rt => rt.stores));
+    const uncovered = allStores.filter(s => !routeStoreSet.has(s));
+
+    const assignments = {};
+    const routeInfo = {};
+    staffNames.forEach(name => { assignments[name] = []; routeInfo[name] = null; });
+
+    if (n >= r) {
+      for (let i = 0; i < r; i++) {
+        const name = staffNames[i];
+        assignments[name] = [...routes[i].stores];
+        routeInfo[name] = { label: routes[i].label, earlyStart: this._routeEarlyStart(routes[i].stores) };
+      }
+      const targets = n > r ? staffNames.slice(r) : staffNames;
+      this._distributeInto(assignments, targets, uncovered);
+    } else {
+      const groups = routes.slice(0, n).map(rt => ({ stores: [...rt.stores], labels: [rt.label] }));
+      for (let i = n; i < r; i++) {
+        let minIdx = 0;
+        for (let j = 1; j < n; j++) {
+          if (groups[j].stores.length < groups[minIdx].stores.length) minIdx = j;
+        }
+        groups[minIdx].stores.push(...routes[i].stores);
+        groups[minIdx].labels.push(routes[i].label);
+      }
+      for (let i = 0; i < n; i++) {
+        const name = staffNames[i];
+        assignments[name] = groups[i].stores;
+        routeInfo[name] = { label: groups[i].labels.join('+'), earlyStart: this._routeEarlyStart(groups[i].stores) };
+      }
+      if (uncovered.length > 0) this._distributeInto(assignments, staffNames, uncovered);
+    }
+
+    return { assignments, routeInfo };
+  },
+
+  _routeEarlyStart(stores) {
+    return stores.some(s => s.includes('(NDD)')) || stores.length >= 3;
+  },
+
+  _distributeInto(result, staffNames, stores) {
+    stores.forEach(store => {
+      let minName = staffNames[0];
+      staffNames.forEach(n => {
+        if (result[n].length < result[minName].length) minName = n;
+      });
+      result[minName].push(store);
+    });
   },
 
   // dayShifts keys are day offsets (0–13); value: 'both'|'morning'|'evening'

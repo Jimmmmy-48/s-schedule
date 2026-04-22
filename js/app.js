@@ -1,3 +1,38 @@
+// ── Constants ─────────────────────────────────────────────────────────────────
+const DEFAULT_STORE_NAMES = [
+  '中華(HD)', '振興(HD)', '民生(HD)', '民主(NDD)', '自由',
+  '鐵道', '經國', '南大二', '寶山雙園', '高翠',
+  '埔頂', '埔頂二', '關埔(NDD)', '世傑(NDD)', '慈雲',
+  '世界(NDD)', '大同', '寶山', '食品', '東山',
+  '巨城(NDD)', '國華', '博愛', '東光', '林森(NDD)',
+  '江山', '竹蓮', '陽光(NDD)',
+];
+
+const MORNING_ROUTES = [
+  { label: '路線一', stores: ['振興(HD)', '南大二', '陽光(NDD)'] },
+  { label: '路線二', stores: ['民生(HD)', '民主(NDD)', '巨城(NDD)'] },
+  { label: '路線三', stores: ['鐵道', '經國', '國華'] },
+  { label: '路線四', stores: ['中華(HD)', '林森(NDD)', '竹蓮'] },
+  { label: '路線五', stores: ['世界(NDD)', '大同', '江山'] },
+  { label: '路線六', stores: ['寶山', '食品', '東山'] },
+  { label: '路線七', stores: ['寶山雙園', '高翠', '博愛', '東光'] },
+];
+
+const EVENING_ROUTES = [
+  { label: '路線一',   stores: ['中華(HD)', '林森(NDD)'] },
+  { label: '路線二',   stores: ['振興(HD)', '南大二', '陽光(NDD)'] },
+  { label: '路線三',   stores: ['民生(HD)', '民主(NDD)'] },
+  { label: '路線四',   stores: ['鐵道', '經國'] },
+  { label: '路線五',   stores: ['自由', '東光'] },
+  { label: '路線六',   stores: ['寶山雙園', '高翠'] },
+  { label: '路線七',   stores: ['埔頂', '埔頂二', '關埔(NDD)', '慈雲', '世傑(NDD)'] },
+  { label: '路線八',   stores: ['世界(NDD)', '大同'] },
+  { label: '路線九',   stores: ['食品', '寶山'] },
+  { label: '路線十',   stores: ['巨城(NDD)', '國華'] },
+  { label: '路線十一', stores: ['博愛', '東山'] },
+  { label: '路線十二', stores: ['江山', '竹蓮'] },
+];
+
 // ── State ─────────────────────────────────────────────────────────────────────
 const state = {
   staff: [],      // [{ name, dayShifts }]  dayShifts: { [offset]: 'both'|'morning'|'evening' }
@@ -8,7 +43,7 @@ const state = {
     count: 28,
     storesPerMorning: 3,
     storesPerEvening: 2,
-    customNames: [],      // empty = auto-generate '店1'~'店N'
+    customNames: DEFAULT_STORE_NAMES,
   },
   activeTab: 'schedule',
 };
@@ -264,6 +299,8 @@ function generateSchedule() {
     state.schedule = Scheduler.generate(state.staff, dateVal, {
       ...state.settings,
       stores: getStoreNames(),
+      morningRoutes: MORNING_ROUTES,
+      eveningRoutes: EVENING_ROUTES,
     });
     persist();
     renderSchedule();
@@ -600,7 +637,12 @@ function loadFromStorage() {
     if (data.schedule)      state.schedule      = data.schedule;
     if (data.startDate)     state.startDate     = data.startDate;
     if (data.settings)      state.settings      = { ...state.settings, ...data.settings };
-    if (data.storeSettings) state.storeSettings = { ...state.storeSettings, ...data.storeSettings };
+    if (data.storeSettings) {
+      state.storeSettings = { ...state.storeSettings, ...data.storeSettings };
+      if (!state.storeSettings.customNames || state.storeSettings.customNames.length === 0) {
+        state.storeSettings.customNames = DEFAULT_STORE_NAMES;
+      }
+    }
   } catch (_) {}
 }
 
@@ -695,26 +737,39 @@ function renderStoreAssignment() {
 
   const blocks = state.schedule.map((day, i) => {
     const isWeekend   = day.dayOfWeek === '六' || day.dayOfWeek === '日';
-    const assignments = day.storeAssignments || { morning: {}, evening: {} };
+    const assignments  = day.storeAssignments || { morning: {}, evening: {} };
+    const mRouteInfo   = assignments.morningRouteInfo || {};
+    const eRouteInfo   = assignments.eveningRouteInfo || {};
+    const hasRouteInfo = !!assignments.morningRouteInfo;
 
-    function buildRows(assignMap, target) {
+    function buildRows(assignMap, routeInfoMap, target, showEarlyStart) {
       const entries = Object.entries(assignMap);
       if (!entries.length) return '<tr><td colspan="3" class="store-no-staff">無排班人員</td></tr>';
       return entries.map(([name, stores]) => {
-        const over = stores.length > target;
+        const over = target !== null && stores.length > target;
+        const ri = routeInfoMap?.[name];
+        const routeBadge = ri?.label ? `<span class="route-badge">${escHtml(ri.label)}</span>` : '';
+        const earlyBadge = (showEarlyStart && ri?.earlyStart) ? `<span class="early-start-badge">18:00起</span>` : '';
         return `<tr class="${over ? 'store-overload' : ''}">
-          <td class="sa-person">${escHtml(name)}</td>
+          <td class="sa-person">${escHtml(name)}${ri ? `<div class="sa-route-info">${routeBadge}${earlyBadge}</div>` : ''}</td>
           <td class="sa-stores">${stores.map(s => `<span class="store-chip">${escHtml(s)}</span>`).join('')}</td>
           <td class="sa-count ${over ? 'overload-count' : ''}">${stores.length}家${over ? ' ⚠' : ''}</td>
         </tr>`;
       }).join('');
     }
 
-    // Check for uncovered stores
     const coveredMorn = new Set(Object.values(assignments.morning).flat());
     const coveredEve  = new Set(Object.values(assignments.evening).flat());
     const uncovMorn   = allStores.filter(s => !coveredMorn.has(s));
     const uncovEve    = allStores.filter(s => !coveredEve.has(s));
+    const mornTarget  = hasRouteInfo ? null : storesPerMorning;
+    const eveTarget   = hasRouteInfo ? null : storesPerEvening;
+    const mornTitle   = hasRouteInfo
+      ? `早班（路線制，共 ${allStores.length} 家）`
+      : `早班（目標 ${storesPerMorning} 家/人，共 ${allStores.length} 家）`;
+    const eveTitle    = hasRouteInfo
+      ? `晚班（路線制，共 ${allStores.length} 家）`
+      : `晚班（目標 ${storesPerEvening} 家/人，共 ${allStores.length} 家）`;
 
     return `
       <div class="store-day-block${isWeekend ? ' store-weekend' : ''}">
@@ -726,13 +781,13 @@ function renderStoreAssignment() {
 
         <div class="store-shifts-grid">
           <div class="store-shift-col">
-            <div class="store-col-title morning-title">早班（目標 ${storesPerMorning} 家/人，共 ${allStores.length} 家）</div>
-            <table class="sa-table"><tbody>${buildRows(assignments.morning, storesPerMorning)}</tbody></table>
+            <div class="store-col-title morning-title">${mornTitle}</div>
+            <table class="sa-table"><tbody>${buildRows(assignments.morning, mRouteInfo, mornTarget, false)}</tbody></table>
             ${uncovMorn.length ? `<div class="uncovered-warn">⚠ 未覆蓋 ${uncovMorn.length} 家：${uncovMorn.map(s => escHtml(s)).join('、')}</div>` : ''}
           </div>
           <div class="store-shift-col">
-            <div class="store-col-title evening-title">晚班（目標 ${storesPerEvening} 家/人，共 ${allStores.length} 家）</div>
-            <table class="sa-table"><tbody>${buildRows(assignments.evening, storesPerEvening)}</tbody></table>
+            <div class="store-col-title evening-title">${eveTitle}</div>
+            <table class="sa-table"><tbody>${buildRows(assignments.evening, eRouteInfo, eveTarget, true)}</tbody></table>
             ${uncovEve.length ? `<div class="uncovered-warn">⚠ 未覆蓋 ${uncovEve.length} 家：${uncovEve.map(s => escHtml(s)).join('、')}</div>` : ''}
           </div>
         </div>
