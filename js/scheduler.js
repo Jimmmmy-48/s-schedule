@@ -132,7 +132,7 @@ const Scheduler = {
   },
 
   _routeEarlyStart(stores) {
-    return stores.some(s => s.includes('(NDD)')) || stores.length >= 3;
+    return stores.length >= 3;
   },
 
   _distributeInto(result, staffNames, stores) {
