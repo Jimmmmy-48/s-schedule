@@ -2,9 +2,6 @@ const Scheduler = {
   generate(staff, startDate, options = {}) {
     const {
       days = 14,
-      morningMin = 8,
-      morningMax = 9,
-      eveningCount = 9,
       morningRoutes = null,
       eveningRoutes = null,
     } = options;
@@ -27,19 +24,15 @@ const Scheduler = {
     for (let i = 0; i < days; i++) {
       const date = new Date(start);
       date.setDate(date.getDate() + i);
-      const morningSize = (i % 2 === 0) ? morningMin : morningMax;
 
-      // Use each person's per-day shift preference for day i
       const eligibleMorning = staff.filter(s => this._canMorning(s, i));
-      const orderedMorning  = this._prioritizedOrder(eligibleMorning, counts);
-      const morning         = orderedMorning.slice(0, Math.min(morningSize, orderedMorning.length));
+      const morning         = this._prioritizedOrder(eligibleMorning, counts);
       const morningNameSet  = new Set(morning.map(s => s.name));
 
       const eligibleEvening = staff.filter(s =>
         this._canEvening(s, i) && !morningNameSet.has(s.name)
       );
-      const orderedEvening = this._prioritizedOrder(eligibleEvening, counts);
-      const evening        = orderedEvening.slice(0, Math.min(eveningCount, orderedEvening.length));
+      const evening = this._prioritizedOrder(eligibleEvening, counts);
 
       morning.forEach(s => { counts[s.name].morning++; counts[s.name].total++; });
       evening.forEach(s => { counts[s.name].evening++; counts[s.name].total++; });

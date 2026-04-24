@@ -32,21 +32,6 @@
           <input type="date" id="start-date">
         </div>
 
-        <div class="settings-grid">
-          <div class="setting-field">
-            <label for="setting-morning-min">早班最少人數</label>
-            <input type="number" id="setting-morning-min" min="1" max="20" value="8">
-          </div>
-          <div class="setting-field">
-            <label for="setting-morning-max">早班最多人數</label>
-            <input type="number" id="setting-morning-max" min="1" max="20" value="9">
-          </div>
-          <div class="setting-field" style="grid-column:span 2">
-            <label for="setting-evening">晚班人數</label>
-            <input type="number" id="setting-evening" min="1" max="20" value="9">
-          </div>
-        </div>
-
         <button class="btn btn-primary" onclick="generateSchedule()">
           ⚡ 產生排班
         </button>
@@ -76,6 +61,15 @@
           </div>
         </div>
 
+        <div class="form-field">
+          <span class="form-label">預設偏好路線（早班）</span>
+          <select id="add-morning-route" class="route-select"></select>
+        </div>
+        <div class="form-field">
+          <span class="form-label">預設偏好路線（晚班）</span>
+          <select id="add-evening-route" class="route-select"></select>
+        </div>
+
         <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">
           新增後可點擊 ✎ 設定每天的班別
         </div>
@@ -93,33 +87,10 @@
       <div class="sidebar-section">
         <div class="sidebar-title">店家設定</div>
 
-        <div class="settings-grid">
-          <div class="setting-field" style="grid-column:span 2">
-            <label for="setting-store-count">店家總數</label>
-            <input type="number" id="setting-store-count" min="1" max="500" value="28"
-              oninput="updateStoreCalc()">
-          </div>
-          <div class="setting-field">
-            <label for="setting-stores-per-morning">早班每人負責</label>
-            <input type="number" id="setting-stores-per-morning" min="1" max="50" value="3"
-              oninput="updateStoreCalc()">
-          </div>
-          <div class="setting-field">
-            <label for="setting-stores-per-evening">晚班每人負責</label>
-            <input type="number" id="setting-stores-per-evening" min="1" max="50" value="2"
-              oninput="updateStoreCalc()">
-          </div>
-        </div>
-
-        <div class="store-calc-block">
-          <div class="store-calc-row">
-            建議早班人數：<strong id="calc-morning-count">10</strong> 人
-          </div>
-          <div class="store-calc-row">
-            建議晚班人數：<strong id="calc-evening-count">14</strong> 人
-          </div>
-          <button class="btn btn-secondary btn-sm" style="margin-top:8px;width:100%"
-            onclick="applyStoreCounts()">套用建議人數至排班設定</button>
+        <div class="setting-field">
+          <label for="setting-store-count">店家總數</label>
+          <input type="number" id="setting-store-count" min="1" max="500" value="28"
+            oninput="updateStoreCount()">
         </div>
 
         <div class="sidebar-link-row" style="margin-top:8px">

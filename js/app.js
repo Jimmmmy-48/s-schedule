@@ -38,14 +38,11 @@ const EVENING_ROUTES = [
 
 // ── State ─────────────────────────────────────────────────────────────────────
 const state = {
-  staff: [],      // [{ name, dayShifts }]  dayShifts: { [offset]: 'both'|'morning'|'evening' }
+  staff: [],
   schedule: null,
   startDate: '',
-  settings: { morningMin: 8, morningMax: 9, eveningCount: 9 },
   storeSettings: {
     count: 28,
-    storesPerMorning: 3,
-    storesPerEvening: 2,
     customNames: DEFAULT_STORE_NAMES,
   },
   activeTab: 'schedule',
@@ -63,16 +60,9 @@ const SHIFT_LABELS = { both: '早晚', morning: '早', evening: '晚' };
 document.addEventListener('DOMContentLoaded', () => {
   loadFromStorage();
 
-  document.getElementById('start-date').value          = state.startDate || getNextMonday();
-  document.getElementById('setting-morning-min').value = state.settings.morningMin;
-  document.getElementById('setting-morning-max').value = state.settings.morningMax;
-  document.getElementById('setting-evening').value     = state.settings.eveningCount;
-
-  // Store settings
-  document.getElementById('setting-store-count').value          = state.storeSettings.count;
-  document.getElementById('setting-stores-per-morning').value   = state.storeSettings.storesPerMorning;
-  document.getElementById('setting-stores-per-evening').value   = state.storeSettings.storesPerEvening;
-  updateStoreCalc();
+  document.getElementById('start-date').value = state.startDate || getNextMonday();
+  document.getElementById('setting-store-count').value = state.storeSettings.count;
+  populateRouteSelects();
 
   renderStaff();
   renderSchedule();
@@ -127,7 +117,18 @@ function daysAvailableText(dayShifts) {
   return `${count}天 (${parts.join(' ')})`;
 }
 
-// ── Add form: default shift type ──────────────────────────────────────────────
+// ── Add form: default shift type & route preference ───────────────────────────
+function populateRouteSelects() {
+  const fill = (id, routes) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = '<option value="">無偏好</option>' +
+      routes.map(r => `<option value="${escAttr(r.label)}">${escHtml(r.label)}</option>`).join('');
+  };
+  fill('add-morning-route', MORNING_ROUTES);
+  fill('add-evening-route', EVENING_ROUTES);
+}
+
 function setShiftType(value) {
   addFormShiftType = value;
   document.querySelectorAll('#shift-type-group .st-btn').forEach(btn => {
@@ -140,11 +141,14 @@ function addStaff() {
   const raw = document.getElementById('staff-input').value.trim();
   if (!raw) return;
 
+  const morningRoute = document.getElementById('add-morning-route')?.value || null;
+  const eveningRoute = document.getElementById('add-evening-route')?.value || null;
+
   const names = raw.split(/[\n,，、]+/).map(s => s.trim()).filter(Boolean);
   let added = 0;
   names.forEach(name => {
     if (!state.staff.find(s => s.name === name)) {
-      state.staff.push(makeStaff(name, makeUniformDayShifts(addFormShiftType)));
+      state.staff.push(makeStaff(name, makeUniformDayShifts(addFormShiftType), morningRoute || null, eveningRoute || null));
       added++;
     }
   });
@@ -320,15 +324,10 @@ function closeEditStaffModal() {
 function generateSchedule() {
   const dateVal = document.getElementById('start-date').value;
   if (!dateVal) { showToast('請選擇開始日期', 'error'); return; }
-
-  state.settings.morningMin   = parseInt(document.getElementById('setting-morning-min').value) || 8;
-  state.settings.morningMax   = parseInt(document.getElementById('setting-morning-max').value) || 9;
-  state.settings.eveningCount = parseInt(document.getElementById('setting-evening').value) || 9;
   state.startDate = dateVal;
 
   try {
     state.schedule = Scheduler.generate(state.staff, dateVal, {
-      ...state.settings,
       stores: getStoreNames(),
       morningRoutes: MORNING_ROUTES,
       eveningRoutes: EVENING_ROUTES,
@@ -338,17 +337,7 @@ function generateSchedule() {
     renderStoreAssignment();
     renderStats();
     switchTab('schedule');
-
-    // Warn if any day is understaffed
-    const { morningMin, eveningCount } = state.settings;
-    const shortDays = state.schedule.filter(d =>
-      d.morning.length < morningMin || d.evening.staff.length < eveningCount
-    ).length;
-    if (shortDays > 0) {
-      showToast(`排班完成，但有 ${shortDays} 天人力不足（紅色標示），請手動補位`, 'warning');
-    } else {
-      showToast('排班已產生！');
-    }
+    showToast('排班已產生！');
   } catch (e) {
     showToast(e.message, 'error');
   }
@@ -502,12 +491,8 @@ function renderSchedule() {
   const periodStart = formatDateDisplay(state.schedule[0].date);
   const periodEnd   = formatDateDisplay(state.schedule[state.schedule.length - 1].date);
 
-  const { morningMin, eveningCount } = state.settings;
-
   const rows = state.schedule.map((day, i) => {
-    const isWeekend    = day.dayOfWeek === '六' || day.dayOfWeek === '日';
-    const morningShort = day.morning.length < morningMin;
-    const eveningShort = day.evening.staff.length < eveningCount;
+    const isWeekend = day.dayOfWeek === '六' || day.dayOfWeek === '日';
 
     const morningTags = day.morning.map(s =>
       `<span class="tag tag-morning" onclick="removeFromShift(${i},'morning','${escAttr(s)}')" title="點擊移除">${escHtml(s)}</span>`
@@ -516,17 +501,9 @@ function renderSchedule() {
       `<span class="tag tag-evening" onclick="removeFromShift(${i},'evening','${escAttr(s)}')" title="點擊移除">${escHtml(s)}</span>`
     ).join('');
 
-    const morningBadge = morningShort
-      ? `<span class="shift-badge badge-short" title="人力不足，需 ${morningMin} 人">${day.morning.length} 人 ⚠ 缺 ${morningMin - day.morning.length}</span>`
-      : `<span class="shift-badge">${day.morning.length} 人</span>`;
-    const eveningBadge = eveningShort
-      ? `<span class="shift-badge badge-short" title="人力不足，需 ${eveningCount} 人">${day.evening.staff.length} 人 ⚠ 缺 ${eveningCount - day.evening.staff.length}</span>`
-      : `<span class="shift-badge">${day.evening.staff.length} 人</span>`;
-
-    const rowClass = [
-      isWeekend ? 'row-weekend' : '',
-      (morningShort || eveningShort) ? 'row-short' : '',
-    ].filter(Boolean).join(' ');
+    const morningBadge = `<span class="shift-badge">${day.morning.length} 人</span>`;
+    const eveningBadge = `<span class="shift-badge">${day.evening.staff.length} 人</span>`;
+    const rowClass = isWeekend ? 'row-weekend' : '';
 
     return `
       <tr class="${rowClass}">
@@ -534,7 +511,7 @@ function renderSchedule() {
           <span class="dow ${isWeekend ? 'dow-weekend' : ''}">${day.dayOfWeek}</span>
           <span class="date-str">${formatDateDisplay(day.date)}</span>
         </td>
-        <td class="col-shift${morningShort ? ' shift-short' : ''}">
+        <td class="col-shift">
           <div class="shift-label shift-label-morning">
             早班 08:00–12:00 ${morningBadge}
           </div>
@@ -543,7 +520,7 @@ function renderSchedule() {
             <button class="btn-add-tag" onclick="openAddModal(${i},'morning')" title="新增人員">＋</button>
           </div>
         </td>
-        <td class="col-shift${eveningShort ? ' shift-short' : ''}">
+        <td class="col-shift">
           <div class="shift-label shift-label-evening">
             晚班 18:00–<button class="btn-endtime" onclick="toggleEndTime(${i})" title="點擊切換結束時間">${day.evening.endTime}</button>
             ${eveningBadge}
@@ -648,7 +625,7 @@ function persist() {
   try {
     localStorage.setItem('shopee-schedule-v1', JSON.stringify({
       staff: state.staff, schedule: state.schedule,
-      startDate: state.startDate, settings: state.settings,
+      startDate: state.startDate,
       storeSettings: state.storeSettings,
     }));
   } catch (_) {}
@@ -660,7 +637,6 @@ function loadFromStorage() {
     if (Array.isArray(data.staff)) {
       state.staff = data.staff.map(s => {
         if (typeof s === 'string') return makeStaff(s, makeUniformDayShifts('both'));
-        // Migrate: old format had shiftType + availableDates
         if (!s.dayShifts) {
           const shiftType = s.shiftType || 'both';
           const dates = (s.availableDates && s.availableDates.length > 0)
@@ -673,9 +649,8 @@ function loadFromStorage() {
         return s;
       });
     }
-    if (data.schedule)      state.schedule      = data.schedule;
-    if (data.startDate)     state.startDate     = data.startDate;
-    if (data.settings)      state.settings      = { ...state.settings, ...data.settings };
+    if (data.schedule)  state.schedule  = data.schedule;
+    if (data.startDate) state.startDate = data.startDate;
     if (data.storeSettings) {
       state.storeSettings = { ...state.storeSettings, ...data.storeSettings };
       if (!state.storeSettings.customNames || state.storeSettings.customNames.length === 0) {
@@ -697,32 +672,9 @@ function getStoreNames() {
   return Array.from({ length: count }, (_, i) => `店${i + 1}`);
 }
 
-function updateStoreCalc() {
-  const count    = parseInt(document.getElementById('setting-store-count').value) || 0;
-  const perMorn  = parseInt(document.getElementById('setting-stores-per-morning').value) || 1;
-  const perEve   = parseInt(document.getElementById('setting-stores-per-evening').value) || 1;
-
-  state.storeSettings.count            = count;
-  state.storeSettings.storesPerMorning = perMorn;
-  state.storeSettings.storesPerEvening = perEve;
-
-  const needMorn = count > 0 ? Math.ceil(count / perMorn) : '–';
-  const needEve  = count > 0 ? Math.ceil(count / perEve)  : '–';
-
-  document.getElementById('calc-morning-count').textContent = needMorn;
-  document.getElementById('calc-evening-count').textContent = needEve;
+function updateStoreCount() {
+  state.storeSettings.count = parseInt(document.getElementById('setting-store-count').value) || 28;
   persist();
-}
-
-function applyStoreCounts() {
-  const needMorn = parseInt(document.getElementById('calc-morning-count').textContent);
-  const needEve  = parseInt(document.getElementById('calc-evening-count').textContent);
-  if (isNaN(needMorn) || isNaN(needEve)) return;
-
-  document.getElementById('setting-morning-min').value = needMorn;
-  document.getElementById('setting-morning-max').value = needMorn;
-  document.getElementById('setting-evening').value     = needEve;
-  showToast(`已套用：早班 ${needMorn} 人，晚班 ${needEve} 人`);
 }
 
 // Store Names Modal
@@ -747,7 +699,6 @@ function saveStoreNames() {
   state.storeSettings.customNames = names;
   state.storeSettings.count       = names.length;
   document.getElementById('setting-store-count').value = names.length;
-  updateStoreCalc();
   closeStoreNamesModal();
   persist();
   showToast(`已儲存 ${names.length} 個店名`);
@@ -771,28 +722,25 @@ function renderStoreAssignment() {
     return;
   }
 
-  const { storesPerMorning, storesPerEvening } = state.storeSettings;
   const allStores = getStoreNames();
 
   const blocks = state.schedule.map((day, i) => {
-    const isWeekend   = day.dayOfWeek === '六' || day.dayOfWeek === '日';
-    const assignments  = day.storeAssignments || { morning: {}, evening: {} };
-    const mRouteInfo   = assignments.morningRouteInfo || {};
-    const eRouteInfo   = assignments.eveningRouteInfo || {};
-    const hasRouteInfo = !!assignments.morningRouteInfo;
+    const isWeekend  = day.dayOfWeek === '六' || day.dayOfWeek === '日';
+    const assignments = day.storeAssignments || { morning: {}, evening: {} };
+    const mRouteInfo  = assignments.morningRouteInfo || {};
+    const eRouteInfo  = assignments.eveningRouteInfo || {};
 
-    function buildRows(assignMap, routeInfoMap, target, showEarlyStart) {
+    function buildRows(assignMap, routeInfoMap, showEarlyStart) {
       const entries = Object.entries(assignMap);
       if (!entries.length) return '<tr><td colspan="3" class="store-no-staff">無排班人員</td></tr>';
       return entries.map(([name, stores]) => {
-        const over = target !== null && stores.length > target;
         const ri = routeInfoMap?.[name];
         const routeBadge = ri?.label ? `<span class="route-badge">${escHtml(ri.label)}</span>` : '';
         const earlyBadge = (showEarlyStart && ri?.earlyStart) ? `<span class="early-start-badge">18:00起</span>` : '';
-        return `<tr class="${over ? 'store-overload' : ''}">
+        return `<tr>
           <td class="sa-person">${escHtml(name)}${ri ? `<div class="sa-route-info">${routeBadge}${earlyBadge}</div>` : ''}</td>
           <td class="sa-stores">${stores.map(s => `<span class="store-chip">${escHtml(s)}</span>`).join('')}</td>
-          <td class="sa-count ${over ? 'overload-count' : ''}">${stores.length}家${over ? ' ⚠' : ''}</td>
+          <td class="sa-count">${stores.length}家</td>
         </tr>`;
       }).join('');
     }
@@ -801,14 +749,6 @@ function renderStoreAssignment() {
     const coveredEve  = new Set(Object.values(assignments.evening).flat());
     const uncovMorn   = allStores.filter(s => !coveredMorn.has(s));
     const uncovEve    = allStores.filter(s => !coveredEve.has(s));
-    const mornTarget  = hasRouteInfo ? null : storesPerMorning;
-    const eveTarget   = hasRouteInfo ? null : storesPerEvening;
-    const mornTitle   = hasRouteInfo
-      ? `早班（路線制，共 ${allStores.length} 家）`
-      : `早班（目標 ${storesPerMorning} 家/人，共 ${allStores.length} 家）`;
-    const eveTitle    = hasRouteInfo
-      ? `晚班（路線制，共 ${allStores.length} 家）`
-      : `晚班（目標 ${storesPerEvening} 家/人，共 ${allStores.length} 家）`;
 
     return `
       <div class="store-day-block${isWeekend ? ' store-weekend' : ''}">
@@ -820,13 +760,13 @@ function renderStoreAssignment() {
 
         <div class="store-shifts-grid">
           <div class="store-shift-col">
-            <div class="store-col-title morning-title">${mornTitle}</div>
-            <table class="sa-table"><tbody>${buildRows(assignments.morning, mRouteInfo, mornTarget, false)}</tbody></table>
+            <div class="store-col-title morning-title">早班（路線制，共 ${allStores.length} 家）</div>
+            <table class="sa-table"><tbody>${buildRows(assignments.morning, mRouteInfo, false)}</tbody></table>
             ${uncovMorn.length ? `<div class="uncovered-warn">⚠ 未覆蓋 ${uncovMorn.length} 家：${uncovMorn.map(s => escHtml(s)).join('、')}</div>` : ''}
           </div>
           <div class="store-shift-col">
-            <div class="store-col-title evening-title">${eveTitle}</div>
-            <table class="sa-table"><tbody>${buildRows(assignments.evening, eRouteInfo, eveTarget, true)}</tbody></table>
+            <div class="store-col-title evening-title">晚班（路線制，共 ${allStores.length} 家）</div>
+            <table class="sa-table"><tbody>${buildRows(assignments.evening, eRouteInfo, true)}</tbody></table>
             ${uncovEve.length ? `<div class="uncovered-warn">⚠ 未覆蓋 ${uncovEve.length} 家：${uncovEve.map(s => escHtml(s)).join('、')}</div>` : ''}
           </div>
         </div>

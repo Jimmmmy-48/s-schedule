@@ -1008,6 +1008,20 @@ body {
   white-space: normal;
 }
 
+/* ── Route Select (add-staff form) ──────────────────────────────────────── */
+.route-select {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  outline: none;
+}
+.route-select:focus { border-color: var(--primary); }
+
 /* ── Route Preference Buttons ────────────────────────────────────────────── */
 .route-pref-group {
   display: flex;
