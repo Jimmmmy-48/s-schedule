@@ -123,7 +123,7 @@ function populateRouteSelects() {
     const el = document.getElementById(id);
     if (!el) return;
     el.innerHTML = '<option value="">無偏好</option>' +
-      routes.map(r => `<option value="${escAttr(r.label)}">${escHtml(r.label)}</option>`).join('');
+      routes.map(r => `<option value="${escAttr(r.label)}">${escHtml(r.label)}（${escHtml(r.stores.join('・'))}）</option>`).join('');
   };
   fill('add-morning-route', MORNING_ROUTES);
   fill('add-evening-route', EVENING_ROUTES);
@@ -212,11 +212,12 @@ function renderRoutePrefButtons(type, currentPref) {
   const routes = type === 'morning' ? MORNING_ROUTES : EVENING_ROUTES;
   const el = document.getElementById(`${type}-route-pref`);
   if (!el) return;
-  const opts = [{ label: '無偏好', value: '' }, ...routes.map(r => ({ label: r.label, value: r.label }))];
+  const opts = [{ label: '無偏好', value: '', stores: [] }, ...routes.map(r => ({ label: r.label, value: r.label, stores: r.stores }))];
   el.innerHTML = opts.map(opt => {
     const active = opt.value === (currentPref || '');
+    const sub = opt.stores.length ? `<span class="rpb-stores">${escHtml(opt.stores.join('・'))}</span>` : '';
     return `<button class="route-pref-btn${active ? ' active' : ''}" data-value="${escAttr(opt.value)}"
-      onclick="setRoutePref('${type}','${escAttr(opt.value)}')">${escHtml(opt.label)}</button>`;
+      onclick="setRoutePref('${type}','${escAttr(opt.value)}')">${escHtml(opt.label)}${sub}</button>`;
   }).join('');
 }
 

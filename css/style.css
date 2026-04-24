@@ -1029,7 +1029,7 @@ body {
   gap: 4px;
 }
 .route-pref-btn {
-  padding: 3px 10px;
+  padding: 4px 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--bg);
@@ -1037,13 +1037,20 @@ body {
   font-size: 12px;
   cursor: pointer;
   transition: background .12s, color .12s, border-color .12s;
-  white-space: nowrap;
+  text-align: left;
+  line-height: 1.4;
 }
 .route-pref-btn:hover { background: #e2e8f0; color: var(--text); }
 .route-pref-btn.active {
   background: var(--primary);
   color: #fff;
   border-color: var(--primary);
+}
+.rpb-stores {
+  display: block;
+  font-size: 10px;
+  opacity: 0.72;
+  font-weight: 400;
 }
 
 /* Staff preference text in sidebar list */
