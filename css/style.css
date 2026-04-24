@@ -1008,6 +1008,38 @@ body {
   white-space: normal;
 }
 
+/* ── Route Preference Buttons ────────────────────────────────────────────── */
+.route-pref-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.route-pref-btn {
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background .12s, color .12s, border-color .12s;
+  white-space: nowrap;
+}
+.route-pref-btn:hover { background: #e2e8f0; color: var(--text); }
+.route-pref-btn.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+/* Staff preference text in sidebar list */
+.staff-pref-text {
+  font-size: 11px;
+  color: var(--primary);
+  padding-left: 2px;
+  margin-top: 1px;
+}
+
 /* Store names textarea */
 .store-names-ta {
   width: 100%;

@@ -14,6 +14,13 @@ const Scheduler = {
     const counts = {};
     staff.forEach(s => { counts[s.name] = { morning: 0, evening: 0, total: 0 }; });
 
+    const morningPrefs = {};
+    const eveningPrefs = {};
+    staff.forEach(s => {
+      if (s.morningRoutePref) morningPrefs[s.name] = s.morningRoutePref;
+      if (s.eveningRoutePref) eveningPrefs[s.name] = s.eveningRoutePref;
+    });
+
     const schedule = [];
     const start = new Date(startDate + 'T00:00:00');
 
@@ -50,10 +57,10 @@ const Scheduler = {
       schedule.forEach(day => {
         if (morningRoutes || eveningRoutes) {
           const mResult = morningRoutes
-            ? this._distributeWithRoutes(day.morning, morningRoutes, stores)
+            ? this._distributeWithRoutes(day.morning, morningRoutes, stores, morningPrefs)
             : { assignments: this._distribute(day.morning, stores), routeInfo: {} };
           const eResult = eveningRoutes
-            ? this._distributeWithRoutes(day.evening.staff, eveningRoutes, stores)
+            ? this._distributeWithRoutes(day.evening.staff, eveningRoutes, stores, eveningPrefs)
             : { assignments: this._distribute(day.evening.staff, stores), routeInfo: {} };
           day.storeAssignments = {
             morning: mResult.assignments,
@@ -89,7 +96,7 @@ const Scheduler = {
     return result;
   },
 
-  _distributeWithRoutes(staffNames, routes, allStores) {
+  _distributeWithRoutes(staffNames, routes, allStores, staffPrefs = {}) {
     if (!staffNames.length) return { assignments: {}, routeInfo: {} };
 
     const n = staffNames.length;
@@ -102,13 +109,42 @@ const Scheduler = {
     const routeInfo = {};
     staffNames.forEach(name => { assignments[name] = []; routeInfo[name] = null; });
 
+    // Resolve conflicts: for each route, randomly pick one winner among preferring staff
+    const winnerByRouteIdx = {};
+    routes.forEach((rt, idx) => {
+      const candidates = staffNames.filter(name => staffPrefs[name] === rt.label);
+      if (candidates.length > 0) {
+        winnerByRouteIdx[idx] = candidates[Math.floor(Math.random() * candidates.length)];
+      }
+    });
+
+    // Build ordered array: place winners at their preferred route's index (if index < n)
+    const ordered = new Array(n).fill(null);
+    const placed = new Set();
+    Object.entries(winnerByRouteIdx).forEach(([idxStr, name]) => {
+      const idx = parseInt(idxStr);
+      if (idx < n && ordered[idx] === null) {
+        ordered[idx] = name;
+        placed.add(name);
+      }
+    });
+
+    // Fill remaining slots with non-placed staff in original priority order
+    let fi = 0;
+    for (let i = 0; i < n; i++) {
+      if (ordered[i] === null) {
+        while (fi < staffNames.length && placed.has(staffNames[fi])) fi++;
+        if (fi < staffNames.length) ordered[i] = staffNames[fi++];
+      }
+    }
+
     if (n >= r) {
       for (let i = 0; i < r; i++) {
-        const name = staffNames[i];
+        const name = ordered[i];
         assignments[name] = [...routes[i].stores];
         routeInfo[name] = { label: routes[i].label, earlyStart: this._routeEarlyStart(routes[i].stores) };
       }
-      const targets = n > r ? staffNames.slice(r) : staffNames;
+      const targets = n > r ? ordered.slice(r) : ordered;
       this._distributeInto(assignments, targets, uncovered);
     } else {
       const groups = routes.slice(0, n).map(rt => ({ stores: [...rt.stores], labels: [rt.label] }));
@@ -121,11 +157,11 @@ const Scheduler = {
         groups[minIdx].labels.push(routes[i].label);
       }
       for (let i = 0; i < n; i++) {
-        const name = staffNames[i];
+        const name = ordered[i];
         assignments[name] = groups[i].stores;
         routeInfo[name] = { label: groups[i].labels.join('+'), earlyStart: this._routeEarlyStart(groups[i].stores) };
       }
-      if (uncovered.length > 0) this._distributeInto(assignments, staffNames, uncovered);
+      if (uncovered.length > 0) this._distributeInto(assignments, ordered, uncovered);
     }
 
     return { assignments, routeInfo };

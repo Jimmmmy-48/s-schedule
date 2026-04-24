@@ -94,8 +94,13 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ── Staff helpers ─────────────────────────────────────────────────────────────
-function makeStaff(name, dayShifts) {
-  return { name, dayShifts: { ...(dayShifts || {}) } };
+function makeStaff(name, dayShifts, morningRoutePref, eveningRoutePref) {
+  return {
+    name,
+    dayShifts: { ...(dayShifts || {}) },
+    morningRoutePref: morningRoutePref || null,
+    eveningRoutePref: eveningRoutePref || null,
+  };
 }
 
 // Build a dayShifts object where all 14 days are set to the same shiftType
@@ -193,8 +198,28 @@ function editStaff(index) {
 
   document.getElementById('edit-name-input').value = s.name;
   renderDateGrid(s.dayShifts || {});
+  renderRoutePrefButtons('morning', s.morningRoutePref || null);
+  renderRoutePrefButtons('evening', s.eveningRoutePref || null);
 
   document.getElementById('edit-staff-modal').classList.add('active');
+}
+
+function renderRoutePrefButtons(type, currentPref) {
+  const routes = type === 'morning' ? MORNING_ROUTES : EVENING_ROUTES;
+  const el = document.getElementById(`${type}-route-pref`);
+  if (!el) return;
+  const opts = [{ label: '無偏好', value: '' }, ...routes.map(r => ({ label: r.label, value: r.label }))];
+  el.innerHTML = opts.map(opt => {
+    const active = opt.value === (currentPref || '');
+    return `<button class="route-pref-btn${active ? ' active' : ''}" data-value="${escAttr(opt.value)}"
+      onclick="setRoutePref('${type}','${escAttr(opt.value)}')">${escHtml(opt.label)}</button>`;
+  }).join('');
+}
+
+function setRoutePref(type, value) {
+  document.querySelectorAll(`#${type}-route-pref .route-pref-btn`).forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.value === value);
+  });
 }
 
 function renderDateGrid(dayShifts) {
@@ -274,7 +299,10 @@ function saveEditStaff() {
     if (shift) dayShifts[parseInt(btn.dataset.offset)] = shift;
   });
 
-  state.staff[editingIndex] = makeStaff(name, dayShifts);
+  const morningPref = document.querySelector('#morning-route-pref .route-pref-btn.active')?.dataset.value || null;
+  const eveningPref = document.querySelector('#evening-route-pref .route-pref-btn.active')?.dataset.value || null;
+
+  state.staff[editingIndex] = makeStaff(name, dayShifts, morningPref || null, eveningPref || null);
   editingIndex = null;
   closeEditStaffModal();
   persist();
@@ -440,7 +468,12 @@ function renderStaff() {
     return;
   }
 
-  listEl.innerHTML = state.staff.map((s, i) => `
+  listEl.innerHTML = state.staff.map((s, i) => {
+    const prefParts = [];
+    if (s.morningRoutePref) prefParts.push(`早:${s.morningRoutePref}`);
+    if (s.eveningRoutePref) prefParts.push(`晚:${s.eveningRoutePref}`);
+    const prefText = prefParts.join('・');
+    return `
     <div class="staff-row">
       <div class="staff-row-main">
         <span class="staff-row-name">${escHtml(s.name)}</span>
@@ -448,8 +481,9 @@ function renderStaff() {
         <button class="btn-remove-staff" onclick="removeStaff(${i})" title="移除">×</button>
       </div>
       <span class="staff-days-text">${daysAvailableText(s.dayShifts)}</span>
-    </div>
-  `).join('');
+      ${prefText ? `<span class="staff-pref-text">偏好 ${escHtml(prefText)}</span>` : ''}
+    </div>`;
+  }).join('');
 }
 
 // ── Render: Schedule Table ────────────────────────────────────────────────────
