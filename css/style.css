@@ -966,6 +966,26 @@ body {
 
 .store-no-staff { text-align: center; color: var(--text-muted); font-size: 12px; padding: 8px; }
 
+.sa-unassigned-row td { background: #fef2f2; }
+
+.unassigned-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: #fee2e2;
+  color: var(--danger);
+  font-weight: 700;
+  border: 1px solid #fca5a5;
+  white-space: nowrap;
+}
+
+.store-chip-missing {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+
 .uncovered-warn {
   margin-top: 6px;
   font-size: 11px;

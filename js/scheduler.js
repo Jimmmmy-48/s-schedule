@@ -60,6 +60,8 @@ const Scheduler = {
             evening: eResult.assignments,
             morningRouteInfo: mResult.routeInfo,
             eveningRouteInfo: eResult.routeInfo,
+            morningUnassigned: mResult.unassignedRoutes,
+            eveningUnassigned: eResult.unassignedRoutes,
           };
         } else {
           day.storeAssignments = {
@@ -89,20 +91,33 @@ const Scheduler = {
     return result;
   },
 
+  _normalizeName(name) {
+    return String(name).replace(/\s*[(（][^)）]*[)）]\s*$/, '').trim();
+  },
+
   _distributeWithRoutes(staffNames, routes, allStores, staffPrefs = {}) {
-    if (!staffNames.length) return { assignments: {}, routeInfo: {} };
+    if (!staffNames.length) return { assignments: {}, routeInfo: {}, unassignedRoutes: [] };
 
     const n = staffNames.length;
     const r = routes.length;
 
-    const routeStoreSet = new Set(routes.flatMap(rt => rt.stores));
-    const uncovered = allStores.filter(s => !routeStoreSet.has(s));
+    // Build normalized-name → actual store name map
+    const normalizedToActual = {};
+    allStores.forEach(s => {
+      const norm = this._normalizeName(s);
+      if (!normalizedToActual[norm]) normalizedToActual[norm] = s;
+    });
+
+    // Resolve each route's store list to actual store names (strip suffix variants)
+    const routesResolved = routes.map(rt => ({
+      label: rt.label,
+      stores: rt.stores.map(s => normalizedToActual[this._normalizeName(s)] || s),
+    }));
 
     const assignments = {};
     const routeInfo = {};
-    staffNames.forEach(name => { assignments[name] = []; routeInfo[name] = null; });
 
-    // Resolve conflicts: for each route, randomly pick one winner among preferring staff
+    // Resolve preference conflicts: for each route, pick one winner among preferring staff
     const winnerByRouteIdx = {};
     routes.forEach((rt, idx) => {
       const candidates = staffNames.filter(name => staffPrefs[name] === rt.label);
@@ -131,47 +146,23 @@ const Scheduler = {
       }
     }
 
-    if (n >= r) {
-      for (let i = 0; i < r; i++) {
-        const name = ordered[i];
-        assignments[name] = [...routes[i].stores];
-        routeInfo[name] = { label: routes[i].label, earlyStart: this._routeEarlyStart(routes[i].stores) };
-      }
-      const targets = n > r ? ordered.slice(r) : ordered;
-      this._distributeInto(assignments, targets, uncovered);
-    } else {
-      const groups = routes.slice(0, n).map(rt => ({ stores: [...rt.stores], labels: [rt.label] }));
-      for (let i = n; i < r; i++) {
-        let minIdx = 0;
-        for (let j = 1; j < n; j++) {
-          if (groups[j].stores.length < groups[minIdx].stores.length) minIdx = j;
-        }
-        groups[minIdx].stores.push(...routes[i].stores);
-        groups[minIdx].labels.push(routes[i].label);
-      }
-      for (let i = 0; i < n; i++) {
-        const name = ordered[i];
-        assignments[name] = groups[i].stores;
-        routeInfo[name] = { label: groups[i].labels.join('+'), earlyStart: this._routeEarlyStart(groups[i].stores) };
-      }
-      if (uncovered.length > 0) this._distributeInto(assignments, ordered, uncovered);
+    // Assign one route per person; extra staff get no stores
+    const assignCount = Math.min(n, r);
+    for (let i = 0; i < assignCount; i++) {
+      const name = ordered[i];
+      if (!name) continue;
+      assignments[name] = [...routesResolved[i].stores];
+      routeInfo[name] = { label: routes[i].label, earlyStart: this._routeEarlyStart(routes[i].stores) };
     }
 
-    return { assignments, routeInfo };
+    // Routes beyond available staff count are marked unassigned
+    const unassignedRoutes = r > n ? routesResolved.slice(n) : [];
+
+    return { assignments, routeInfo, unassignedRoutes };
   },
 
   _routeEarlyStart(stores) {
     return stores.length >= 3;
-  },
-
-  _distributeInto(result, staffNames, stores) {
-    stores.forEach(store => {
-      let minName = staffNames[0];
-      staffNames.forEach(n => {
-        if (result[n].length < result[minName].length) minName = n;
-      });
-      result[minName].push(store);
-    });
   },
 
   // dayShifts keys are day offsets (0–13); value: 'both'|'morning'|'evening'

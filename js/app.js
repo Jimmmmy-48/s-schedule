@@ -746,10 +746,20 @@ function renderStoreAssignment() {
       }).join('');
     }
 
-    const coveredMorn = new Set(Object.values(assignments.morning).flat());
-    const coveredEve  = new Set(Object.values(assignments.evening).flat());
-    const uncovMorn   = allStores.filter(s => !coveredMorn.has(s));
-    const uncovEve    = allStores.filter(s => !coveredEve.has(s));
+    const morningUnassigned = assignments.morningUnassigned || [];
+    const eveningUnassigned = assignments.eveningUnassigned || [];
+
+    function buildUnassignedRows(unassigned) {
+      return unassigned.map(rt => `
+        <tr class="sa-unassigned-row">
+          <td class="sa-person">
+            <span class="unassigned-badge">缺人</span>
+            <div class="sa-route-info"><span class="route-badge">${escHtml(rt.label)}</span></div>
+          </td>
+          <td class="sa-stores">${rt.stores.map(s => `<span class="store-chip store-chip-missing">${escHtml(s)}</span>`).join('')}</td>
+          <td class="sa-count">${rt.stores.length}家</td>
+        </tr>`).join('');
+    }
 
     return `
       <div class="store-day-block${isWeekend ? ' store-weekend' : ''}">
@@ -762,13 +772,11 @@ function renderStoreAssignment() {
         <div class="store-shifts-grid">
           <div class="store-shift-col">
             <div class="store-col-title morning-title">早班（路線制，共 ${allStores.length} 家）</div>
-            <table class="sa-table"><tbody>${buildRows(assignments.morning, mRouteInfo, false)}</tbody></table>
-            ${uncovMorn.length ? `<div class="uncovered-warn">⚠ 未覆蓋 ${uncovMorn.length} 家：${uncovMorn.map(s => escHtml(s)).join('、')}</div>` : ''}
+            <table class="sa-table"><tbody>${buildRows(assignments.morning, mRouteInfo, false)}${buildUnassignedRows(morningUnassigned)}</tbody></table>
           </div>
           <div class="store-shift-col">
             <div class="store-col-title evening-title">晚班（路線制，共 ${allStores.length} 家）</div>
-            <table class="sa-table"><tbody>${buildRows(assignments.evening, eRouteInfo, true)}</tbody></table>
-            ${uncovEve.length ? `<div class="uncovered-warn">⚠ 未覆蓋 ${uncovEve.length} 家：${uncovEve.map(s => escHtml(s)).join('、')}</div>` : ''}
+            <table class="sa-table"><tbody>${buildRows(assignments.evening, eRouteInfo, true)}${buildUnassignedRows(eveningUnassigned)}</tbody></table>
           </div>
         </div>
       </div>`;
