@@ -178,21 +178,57 @@ function clearAllStaff() {
 
 function importSampleStaff() {
   const samples = [
-    '王小明','李美華','陳志偉','林佳蓉','黃建宏','吳淑芬','張家豪','劉雅婷',
-    '蔡正義','許佩君','鄭文傑','葉美玲','賴宗翰','謝欣怡','洪志豪','周雅慧',
-    '蘇家銘','邱秀英','廖建宏','江淑娟','曾志遠','彭美華','呂宗哲','盧雅文',
-    '柯志成','潘淑惠','余建明','蕭美雲','何宗仁','朱雅芳','宋志豪','胡佳慧',
-    '徐建成','馮秀蘭','魏宗達','翁淑貞','范志明','沈美華','孫宗憲','戴雅琪',
-    '韓建文','施淑芳','杜志勇','鍾美麗','尤宗祥',
+    { name: '莊薏玄',  dayShifts: {0:'both',1:'morning',2:'both',3:'morning',4:'both',5:'morning',6:'both',7:'both',8:'both',9:'both',10:'both',11:'both',12:'morning',13:'both'}, morningRoutePref: '路線二',  eveningRoutePref: null },
+    { name: '黃子家',  dayShifts: {0:'morning',1:'morning',2:'morning',3:'morning',4:'morning',5:'morning',6:'morning',7:'morning',8:'morning',9:'morning',10:'morning',11:'morning',12:'morning',13:'morning'}, morningRoutePref: '路線一',  eveningRoutePref: null },
+    { name: '莊璦如',  dayShifts: {1:'morning',3:'morning',4:'morning',5:'morning',6:'morning',8:'morning',9:'morning',10:'morning',11:'morning',12:'morning',13:'morning'}, morningRoutePref: '路線四',  eveningRoutePref: null },
+    { name: '楊建宇',  dayShifts: {0:'morning',1:'morning',2:'morning',3:'morning',4:'morning',5:'morning',6:'morning',7:'morning',8:'morning',9:'morning',10:'morning',11:'morning',12:'morning',13:'morning'}, morningRoutePref: '路線二',  eveningRoutePref: null },
+    { name: '楊凱晴',  dayShifts: {0:'morning',1:'morning',2:'morning',3:'morning',4:'morning',5:'morning',6:'morning',7:'morning',8:'morning',9:'morning',10:'morning',11:'morning',12:'morning',13:'morning'}, morningRoutePref: '路線二',  eveningRoutePref: null },
+    { name: '徐翎臻',  dayShifts: {0:'morning',3:'morning',4:'morning',7:'morning'}, morningRoutePref: '路線六',  eveningRoutePref: null },
+    { name: '楊雅妏',  dayShifts: {0:'morning',1:'morning',2:'morning',4:'morning',7:'morning',8:'morning',9:'morning',10:'morning'}, morningRoutePref: null, eveningRoutePref: null },
+    { name: '角浩之',  dayShifts: {0:'morning',2:'morning',3:'morning',4:'morning',5:'morning',6:'morning',7:'morning',8:'morning',10:'morning',11:'morning',12:'morning'}, morningRoutePref: '路線五',  eveningRoutePref: null },
+    { name: '劉冠霆',  dayShifts: {0:'morning',3:'morning',4:'morning',6:'morning',7:'morning',10:'morning',11:'morning',13:'morning'}, morningRoutePref: '路線七',  eveningRoutePref: null },
+    { name: '阿寧',    dayShifts: {1:'both',2:'both',3:'both',4:'both',7:'both',8:'both',9:'both',10:'both',11:'both',12:'both',13:'both'}, morningRoutePref: null, eveningRoutePref: null },
+    { name: '你行你上',dayShifts: {0:'morning',1:'morning',2:'morning',3:'morning',4:'morning',5:'morning',6:'morning',7:'morning',8:'morning',9:'morning',10:'morning',11:'morning',12:'morning',13:'morning'}, morningRoutePref: null, eveningRoutePref: null },
+    { name: '@',       dayShifts: {4:'evening',5:'both',6:'evening'}, morningRoutePref: null, eveningRoutePref: null },
+    { name: '雅典娜',  dayShifts: {1:'evening',3:'evening',4:'evening',6:'evening',7:'evening',8:'evening',9:'evening',10:'evening',11:'evening',12:'evening',13:'evening'}, morningRoutePref: null, eveningRoutePref: null },
+    { name: '翁劭瑜',  dayShifts: {4:'morning',10:'morning'}, morningRoutePref: '路線十',  eveningRoutePref: null },
+    { name: '許星羽',  dayShifts: {0:'morning',1:'morning',2:'morning',3:'morning',4:'morning',5:'morning',6:'morning',7:'morning',8:'morning',9:'morning',10:'morning',11:'morning',12:'morning',13:'morning'}, morningRoutePref: null, eveningRoutePref: null },
+    { name: '葉峻州',  dayShifts: {0:'morning',1:'morning',2:'morning',3:'morning',4:'morning',5:'morning',6:'morning',7:'morning',8:'morning',9:'morning',10:'morning',11:'morning',12:'morning',13:'morning'}, morningRoutePref: null, eveningRoutePref: null },
+    { name: '李瑜庭',  dayShifts: {}, morningRoutePref: null, eveningRoutePref: null },
+    { name: '翁仕佑',  dayShifts: {1:'evening',3:'evening',4:'evening',8:'evening',10:'evening'}, morningRoutePref: null, eveningRoutePref: null },
+    { name: '楊敬誠',  dayShifts: {0:'evening',1:'evening',2:'evening',3:'evening',4:'evening',5:'evening',6:'evening',7:'evening',8:'evening',9:'evening',10:'evening',11:'evening',12:'evening',13:'evening'}, morningRoutePref: null, eveningRoutePref: '路線一' },
+    { name: '王鼎鈞',  dayShifts: {2:'evening',5:'both',6:'both',7:'evening',8:'both',9:'morning',11:'evening',12:'morning',13:'morning'}, morningRoutePref: null, eveningRoutePref: null },
+    { name: '鍾秀芬',  dayShifts: {0:'evening',1:'evening',2:'evening',3:'evening',4:'evening',5:'evening',6:'evening',7:'evening',8:'evening',9:'evening',10:'evening',11:'evening',12:'evening',13:'evening'}, morningRoutePref: null, eveningRoutePref: null },
+    { name: '陳采妮',  dayShifts: {6:'evening',13:'evening'}, morningRoutePref: null, eveningRoutePref: '路線六' },
+    { name: '黃興志',  dayShifts: {0:'evening',1:'evening',2:'evening',3:'evening',4:'evening',5:'evening',6:'evening',7:'evening',8:'evening',9:'evening',10:'evening',11:'evening',12:'evening',13:'evening'}, morningRoutePref: null, eveningRoutePref: null },
+    { name: '陳信儒',  dayShifts: {0:'evening',1:'evening',2:'evening',3:'evening',4:'evening',5:'evening',6:'evening',7:'evening',8:'evening',9:'evening',10:'evening',11:'evening',12:'evening',13:'evening'}, morningRoutePref: null, eveningRoutePref: '路線七' },
+    { name: '翁郁琇',  dayShifts: {0:'evening',1:'evening',2:'evening',3:'evening',4:'evening',5:'evening',6:'evening',7:'evening',8:'evening',9:'evening',10:'evening',11:'evening',12:'evening',13:'evening'}, morningRoutePref: null, eveningRoutePref: null },
+    { name: '戴運維',  dayShifts: {1:'evening',8:'evening'}, morningRoutePref: null, eveningRoutePref: null },
+    { name: '李詠順',  dayShifts: {0:'evening',1:'evening',2:'evening',3:'evening',4:'evening',5:'evening',6:'evening',7:'evening',8:'evening',9:'evening',10:'evening',11:'evening',12:'evening',13:'evening'}, morningRoutePref: null, eveningRoutePref: '路線六' },
+    { name: '陳映璇',  dayShifts: {0:'evening',1:'evening',2:'evening',3:'evening',4:'evening',5:'evening',6:'evening',7:'evening',8:'evening',9:'evening',10:'evening',11:'evening',12:'evening',13:'evening'}, morningRoutePref: null, eveningRoutePref: null },
+    { name: '呂芸葳',  dayShifts: {9:'evening',10:'evening'}, morningRoutePref: null, eveningRoutePref: '路線九' },
+    { name: '洪子軒',  dayShifts: {1:'evening',3:'evening',7:'evening',9:'evening'}, morningRoutePref: null, eveningRoutePref: null },
+    { name: '詹舜元',  dayShifts: {0:'evening',1:'evening',2:'evening',3:'evening',4:'evening',5:'evening',6:'evening',7:'evening',8:'evening',9:'evening',10:'evening',11:'evening',12:'evening',13:'evening'}, morningRoutePref: null, eveningRoutePref: null },
+    { name: '吳明坤',  dayShifts: {0:'evening',2:'evening',4:'evening',5:'evening',7:'evening',9:'evening',11:'evening',12:'evening',13:'evening'}, morningRoutePref: null, eveningRoutePref: null },
+    { name: '雷司',    dayShifts: {0:'evening',3:'evening',4:'evening',5:'evening',8:'evening',9:'evening',10:'evening',11:'evening',12:'evening'}, morningRoutePref: null, eveningRoutePref: null },
+    { name: '西瓜',    dayShifts: {0:'both',1:'both',2:'both',3:'both',4:'both',5:'both',6:'both',7:'both',8:'both',9:'both',10:'both',11:'both',12:'both',13:'both'}, morningRoutePref: null, eveningRoutePref: null },
+    { name: '楊宸祐',  dayShifts: {0:'evening',1:'evening',2:'evening',3:'evening',4:'evening',6:'evening',7:'evening',8:'evening',9:'evening',10:'evening',12:'evening',13:'evening'}, morningRoutePref: null, eveningRoutePref: null },
+    { name: '蕭先育',  dayShifts: {0:'evening',1:'evening',2:'evening',3:'evening',5:'evening',6:'evening',7:'evening',8:'evening',9:'evening',10:'evening',11:'evening'}, morningRoutePref: null, eveningRoutePref: '路線十二' },
+    { name: '吳秉叡',  dayShifts: {0:'evening',1:'evening',2:'evening',3:'evening',4:'evening',5:'evening',6:'evening',7:'evening',8:'evening',9:'evening',10:'evening',11:'evening',12:'evening',13:'evening'}, morningRoutePref: null, eveningRoutePref: null },
+    { name: '楊韻如',  dayShifts: {0:'evening',3:'evening',4:'evening',6:'evening',9:'evening',10:'evening',13:'evening'}, morningRoutePref: null, eveningRoutePref: null },
+    { name: '謝燕宣',  dayShifts: {0:'evening',1:'evening',2:'evening',3:'evening',4:'evening',5:'evening',6:'evening',7:'evening',8:'evening',9:'evening',10:'evening',11:'evening',12:'evening',13:'evening'}, morningRoutePref: null, eveningRoutePref: null },
+    { name: '店長',    dayShifts: {0:'both',1:'both',2:'both',3:'both',4:'both',5:'both',6:'both',7:'both',8:'both',9:'both',10:'both',11:'both',12:'both',13:'both'}, morningRoutePref: null, eveningRoutePref: null },
   ];
-  samples.forEach(name => {
-    if (!state.staff.find(s => s.name === name)) {
-      state.staff.push(makeStaff(name, makeUniformDayShifts('both')));
+  let added = 0;
+  samples.forEach(s => {
+    if (!state.staff.find(st => st.name === s.name)) {
+      state.staff.push(makeStaff(s.name, s.dayShifts, s.morningRoutePref, s.eveningRoutePref));
+      added++;
     }
   });
   persist();
   renderStaff();
-  showToast('已載入 45 位範例人員');
+  if (added) showToast(`已載入 ${added} 位人員`);
 }
 
 // ── Edit Staff Modal ──────────────────────────────────────────────────────────
