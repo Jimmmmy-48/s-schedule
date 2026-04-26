@@ -351,6 +351,17 @@ body {
   white-space: nowrap;
 }
 
+.gender-tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 10px;
+  line-height: 1.6;
+  flex-shrink: 0;
+}
+.gender-tag.gender-男 { background: #dbeafe; color: #1d4ed8; }
+.gender-tag.gender-女 { background: #fce7f3; color: #be185d; }
+
 /* Available days text in staff list — now on second line */
 .staff-days-text {
   font-size: 11px;

@@ -48,7 +48,8 @@ const state = {
   activeTab: 'schedule',
 };
 
-let addFormShiftType = 'both';  // default shift for newly added staff (applied to all 14 days)
+let addFormShiftType = 'both';
+let addFormGender    = null;
 let editingIndex     = null;
 let addModalCtx      = { dayIndex: null, shiftType: null };
 
@@ -84,12 +85,13 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ── Staff helpers ─────────────────────────────────────────────────────────────
-function makeStaff(name, dayShifts, morningRoutePref, eveningRoutePref) {
+function makeStaff(name, dayShifts, morningRoutePref, eveningRoutePref, gender) {
   return {
     name,
     dayShifts: { ...(dayShifts || {}) },
     morningRoutePref: morningRoutePref || null,
     eveningRoutePref: eveningRoutePref || null,
+    gender: gender || null,
   };
 }
 
@@ -136,6 +138,22 @@ function setShiftType(value) {
   });
 }
 
+function setAddGender(value) {
+  const current = document.querySelector('#add-gender-group .st-btn.active')?.dataset.value;
+  addFormGender = current === value ? null : value;
+  document.querySelectorAll('#add-gender-group .st-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.value === addFormGender);
+  });
+}
+
+function setEditGender(value) {
+  const current = document.querySelector('#edit-gender-group .st-btn.active')?.dataset.value;
+  const next = current === value ? null : value;
+  document.querySelectorAll('#edit-gender-group .st-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.value === next);
+  });
+}
+
 // ── Staff Management ──────────────────────────────────────────────────────────
 function addStaff() {
   const raw = document.getElementById('staff-input').value.trim();
@@ -143,12 +161,13 @@ function addStaff() {
 
   const morningRoute = document.getElementById('add-morning-route')?.value || null;
   const eveningRoute = document.getElementById('add-evening-route')?.value || null;
+  const gender = document.querySelector('#add-gender-group .st-btn.active')?.dataset.value || null;
 
   const names = raw.split(/[\n,，、]+/).map(s => s.trim()).filter(Boolean);
   let added = 0;
   names.forEach(name => {
     if (!state.staff.find(s => s.name === name)) {
-      state.staff.push(makeStaff(name, makeUniformDayShifts(addFormShiftType), morningRoute || null, eveningRoute || null));
+      state.staff.push(makeStaff(name, makeUniformDayShifts(addFormShiftType), morningRoute || null, eveningRoute || null, gender));
       added++;
     }
   });
@@ -237,6 +256,9 @@ function editStaff(index) {
   const s = state.staff[index];
 
   document.getElementById('edit-name-input').value = s.name;
+  document.querySelectorAll('#edit-gender-group .st-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.value === (s.gender || null));
+  });
   renderDateGrid(s.dayShifts || {});
   renderRoutePrefButtons('morning', s.morningRoutePref || null);
   renderRoutePrefButtons('evening', s.eveningRoutePref || null);
@@ -342,8 +364,9 @@ function saveEditStaff() {
 
   const morningPref = document.querySelector('#morning-route-pref .route-pref-btn.active')?.dataset.value || null;
   const eveningPref = document.querySelector('#evening-route-pref .route-pref-btn.active')?.dataset.value || null;
+  const gender      = document.querySelector('#edit-gender-group .st-btn.active')?.dataset.value || null;
 
-  state.staff[editingIndex] = makeStaff(name, dayShifts, morningPref || null, eveningPref || null);
+  state.staff[editingIndex] = makeStaff(name, dayShifts, morningPref || null, eveningPref || null, gender);
   editingIndex = null;
   closeEditStaffModal();
   persist();
@@ -502,6 +525,7 @@ function renderStaff() {
     return `
     <div class="staff-row">
       <div class="staff-row-main">
+        ${s.gender ? `<span class="gender-tag gender-${escAttr(s.gender)}">${escHtml(s.gender)}</span>` : ''}
         <span class="staff-row-name">${escHtml(s.name)}</span>
         <button class="btn-edit-staff" onclick="editStaff(${i})" title="編輯">✎</button>
         <button class="btn-remove-staff" onclick="removeStaff(${i})" title="移除">×</button>

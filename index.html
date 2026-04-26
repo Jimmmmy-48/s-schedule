@@ -51,6 +51,14 @@
           <button class="btn btn-secondary btn-sm" onclick="addStaff()">新增</button>
         </div>
 
+        <div class="form-field">
+          <span class="form-label">性別</span>
+          <div class="shift-type-group" id="add-gender-group">
+            <button class="st-btn" data-value="男" onclick="setAddGender('男')">男</button>
+            <button class="st-btn" data-value="女" onclick="setAddGender('女')">女</button>
+          </div>
+        </div>
+
         <!-- Default shift type applied to all 14 days on add -->
         <div class="form-field">
           <span class="form-label">新增預設班別</span>
@@ -171,6 +179,14 @@
       <div class="form-field">
         <label class="form-label" for="edit-name-input">姓名</label>
         <input type="text" id="edit-name-input" class="edit-text-input" autocomplete="off">
+      </div>
+
+      <div class="form-field">
+        <span class="form-label">性別</span>
+        <div class="shift-type-group" id="edit-gender-group">
+          <button class="st-btn" data-value="男" onclick="setEditGender('男')">男</button>
+          <button class="st-btn" data-value="女" onclick="setEditGender('女')">女</button>
+        </div>
       </div>
 
       <!-- Per-day shift type grid -->
