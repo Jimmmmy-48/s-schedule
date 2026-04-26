@@ -33,8 +33,8 @@
         </button>
       </div>
 
-      <!-- 人員管理 -->
-      <div class="tp-section tp-section-staff">
+      <!-- 人員管理（精簡） -->
+      <div class="tp-section">
         <div class="tp-label">
           人員管理
           <span id="staff-count" style="color:var(--primary);margin-left:4px">0</span> 人
@@ -44,24 +44,6 @@
             placeholder="輸入姓名，Enter 新增"
             autocomplete="off">
           <button class="btn btn-secondary btn-sm" onclick="addStaff()">新增</button>
-        </div>
-        <div class="tp-options-row">
-          <div class="shift-type-group" id="add-gender-group">
-            <button class="st-btn" data-value="男" onclick="setAddGender(this.dataset.value)">男</button>
-            <button class="st-btn" data-value="女" onclick="setAddGender(this.dataset.value)">女</button>
-          </div>
-          <div class="shift-type-group" id="shift-type-group">
-            <button class="st-btn active" data-value="both"    onclick="setShiftType('both')">早晚</button>
-            <button class="st-btn"        data-value="morning" onclick="setShiftType('morning')">早</button>
-            <button class="st-btn"        data-value="evening" onclick="setShiftType('evening')">晚</button>
-          </div>
-          <label class="backup-inline-label">
-            <input type="checkbox" id="add-backup-toggle">備用
-          </label>
-        </div>
-        <div class="tp-options-row">
-          <select id="add-morning-route" class="route-select"></select>
-          <select id="add-evening-route" class="route-select"></select>
         </div>
         <div class="sidebar-link-row" style="margin-top:4px">
           <button class="link-btn" onclick="importSampleStaff()">載入人員資料</button>
@@ -79,6 +61,41 @@
         </div>
         <div class="sidebar-link-row" style="margin-top:8px">
           <button class="link-btn" onclick="openStoreNamesModal()">自訂店名</button>
+        </div>
+      </div>
+
+      <!-- 新增選項（可滑動） -->
+      <div class="tp-section tp-section-options">
+        <div class="tp-label">新增預設</div>
+        <div class="tp-options-row">
+          <div>
+            <div class="tp-opt-label">性別</div>
+            <div class="shift-type-group" id="add-gender-group">
+              <button class="st-btn" data-value="男" onclick="setAddGender(this.dataset.value)">男</button>
+              <button class="st-btn" data-value="女" onclick="setAddGender(this.dataset.value)">女</button>
+            </div>
+          </div>
+          <div>
+            <div class="tp-opt-label">班別</div>
+            <div class="shift-type-group" id="shift-type-group">
+              <button class="st-btn active" data-value="both"    onclick="setShiftType('both')">早晚</button>
+              <button class="st-btn"        data-value="morning" onclick="setShiftType('morning')">早</button>
+              <button class="st-btn"        data-value="evening" onclick="setShiftType('evening')">晚</button>
+            </div>
+          </div>
+          <div>
+            <div class="tp-opt-label">早班路線</div>
+            <select id="add-morning-route" class="route-select"></select>
+          </div>
+          <div>
+            <div class="tp-opt-label">晚班路線</div>
+            <select id="add-evening-route" class="route-select"></select>
+          </div>
+          <div style="display:flex;align-items:flex-end;padding-bottom:2px">
+            <label class="backup-inline-label">
+              <input type="checkbox" id="add-backup-toggle">備用
+            </label>
+          </div>
         </div>
       </div>
 

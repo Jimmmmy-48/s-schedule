@@ -85,7 +85,19 @@ body {
 }
 .tp-section:last-child { border-right: none; }
 
-.tp-section-staff { flex: 1; min-width: 340px; }
+.tp-section-options {
+  display: flex;
+  flex-direction: column;
+}
+
+.tp-opt-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: 4px;
+}
 
 .tp-label {
   font-size: 11px;
@@ -98,10 +110,9 @@ body {
 
 .tp-options-row {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
-  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: nowrap;
 }
 
 .backup-inline-label {
