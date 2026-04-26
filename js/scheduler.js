@@ -14,8 +14,10 @@ const Scheduler = {
     const morningPrefs = {};
     const eveningPrefs = {};
     staff.forEach(s => {
-      if (s.morningRoutePref) morningPrefs[s.name] = s.morningRoutePref;
-      if (s.eveningRoutePref) eveningPrefs[s.name] = s.eveningRoutePref;
+      const mp = Array.isArray(s.morningRoutePref) ? s.morningRoutePref : (s.morningRoutePref ? [s.morningRoutePref] : []);
+      const ep = Array.isArray(s.eveningRoutePref) ? s.eveningRoutePref : (s.eveningRoutePref ? [s.eveningRoutePref] : []);
+      if (mp.length) morningPrefs[s.name] = mp;
+      if (ep.length) eveningPrefs[s.name] = ep;
     });
 
     const regularStaff = staff.filter(s => !s.backup);
@@ -128,14 +130,24 @@ const Scheduler = {
     const assignments = {};
     const routeInfo = {};
 
-    // Resolve preference conflicts: for each route, pick one winner among preferring staff
+    // Two-round preference matching: first preferences, then second preferences
     const winnerByRouteIdx = {};
-    routes.forEach((rt, idx) => {
-      const candidates = staffNames.filter(name => staffPrefs[name] === rt.label);
-      if (candidates.length > 0) {
-        winnerByRouteIdx[idx] = candidates[Math.floor(Math.random() * candidates.length)];
-      }
-    });
+    const alreadyWon = new Set();
+    for (let round = 0; round < 2; round++) {
+      routes.forEach((rt, idx) => {
+        if (idx in winnerByRouteIdx) return;
+        const candidates = staffNames.filter(name => {
+          if (alreadyWon.has(name)) return false;
+          const prefs = staffPrefs[name] || [];
+          return prefs[round] === rt.label;
+        });
+        if (candidates.length > 0) {
+          const winner = candidates[Math.floor(Math.random() * candidates.length)];
+          winnerByRouteIdx[idx] = winner;
+          alreadyWon.add(winner);
+        }
+      });
+    }
 
     // Build ordered array: place winners at their preferred route's index (if index < n)
     const ordered = new Array(n).fill(null);

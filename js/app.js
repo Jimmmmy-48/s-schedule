@@ -86,11 +86,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── Staff helpers ─────────────────────────────────────────────────────────────
 function makeStaff(name, dayShifts, morningRoutePref, eveningRoutePref, gender, backup) {
+  const normPref = p => Array.isArray(p) ? p.filter(Boolean) : (p ? [p] : []);
   return {
     name,
     dayShifts: { ...(dayShifts || {}) },
-    morningRoutePref: morningRoutePref || null,
-    eveningRoutePref: eveningRoutePref || null,
+    morningRoutePref: normPref(morningRoutePref),
+    eveningRoutePref: normPref(eveningRoutePref),
     gender: gender || null,
     backup: backup || false,
   };
@@ -160,8 +161,8 @@ function addStaff() {
   const raw = document.getElementById('staff-input').value.trim();
   if (!raw) return;
 
-  const morningRoute = document.getElementById('add-morning-route')?.value || null;
-  const eveningRoute = document.getElementById('add-evening-route')?.value || null;
+  const morningRoute = document.getElementById('add-morning-route')?.value ? [document.getElementById('add-morning-route').value] : [];
+  const eveningRoute = document.getElementById('add-evening-route')?.value ? [document.getElementById('add-evening-route').value] : [];
   const gender  = document.querySelector('#add-gender-group .st-btn.active')?.dataset.value || null;
   const backup  = document.getElementById('add-backup-toggle')?.checked || false;
 
@@ -263,29 +264,46 @@ function editStaff(index) {
   });
   document.getElementById('edit-backup-toggle').checked = !!s.backup;
   renderDateGrid(s.dayShifts || {});
-  renderRoutePrefButtons('morning', s.morningRoutePref || null);
-  renderRoutePrefButtons('evening', s.eveningRoutePref || null);
+  renderRoutePrefButtons('morning', s.morningRoutePref || []);
+  renderRoutePrefButtons('evening', s.eveningRoutePref || []);
 
   document.getElementById('edit-staff-modal').classList.add('active');
 }
 
-function renderRoutePrefButtons(type, currentPref) {
+function renderRoutePrefButtons(type, currentPrefs) {
   const routes = type === 'morning' ? MORNING_ROUTES : EVENING_ROUTES;
   const el = document.getElementById(`${type}-route-pref`);
   if (!el) return;
-  const opts = [{ label: '無偏好', value: '', stores: [] }, ...routes.map(r => ({ label: r.label, value: r.label, stores: r.stores }))];
-  el.innerHTML = opts.map(opt => {
-    const active = opt.value === (currentPref || '');
-    const sub = opt.stores.length ? `<span class="rpb-stores">${escHtml(opt.stores.join('・'))}</span>` : '';
-    return `<button class="route-pref-btn${active ? ' active' : ''}" data-value="${escAttr(opt.value)}"
-      onclick="setRoutePref('${type}','${escAttr(opt.value)}')">${escHtml(opt.label)}${sub}</button>`;
+  const prefs = Array.isArray(currentPrefs) ? currentPrefs.filter(Boolean) : (currentPrefs ? [currentPrefs] : []);
+  el.innerHTML = routes.map(r => {
+    const rank = prefs.indexOf(r.label);
+    const isActive = rank >= 0;
+    const rankBadge = isActive ? `<span class="rpb-rank">${rank + 1}</span>` : '';
+    const sub = `<span class="rpb-stores">${escHtml(r.stores.join('・'))}</span>`;
+    return `<button class="route-pref-btn${isActive ? ' active' : ''}" data-value="${escAttr(r.label)}" data-rank="${rank}"
+      onclick="setRoutePref('${type}', this.dataset.value)">${escHtml(r.label)}${rankBadge}${sub}</button>`;
   }).join('');
 }
 
 function setRoutePref(type, value) {
-  document.querySelectorAll(`#${type}-route-pref .route-pref-btn`).forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.value === value);
+  const el = document.getElementById(`${type}-route-pref`);
+  if (!el) return;
+  const currentPrefs = [];
+  el.querySelectorAll('.route-pref-btn').forEach(btn => {
+    const rank = parseInt(btn.dataset.rank);
+    if (rank >= 0) currentPrefs[rank] = btn.dataset.value;
   });
+  const idx = currentPrefs.indexOf(value);
+  let newPrefs;
+  if (idx >= 0) {
+    newPrefs = currentPrefs.filter(v => v !== value);
+  } else if (currentPrefs.filter(Boolean).length < 2) {
+    newPrefs = [...currentPrefs.filter(Boolean), value];
+  } else {
+    showToast('最多選 2 個志願', 'warning');
+    return;
+  }
+  renderRoutePrefButtons(type, newPrefs);
 }
 
 function renderDateGrid(dayShifts) {
@@ -365,12 +383,20 @@ function saveEditStaff() {
     if (shift) dayShifts[parseInt(btn.dataset.offset)] = shift;
   });
 
-  const morningPref = document.querySelector('#morning-route-pref .route-pref-btn.active')?.dataset.value || null;
-  const eveningPref = document.querySelector('#evening-route-pref .route-pref-btn.active')?.dataset.value || null;
+  const getOrderedPrefs = id => {
+    const result = [];
+    document.querySelectorAll(`#${id} .route-pref-btn`).forEach(btn => {
+      const rank = parseInt(btn.dataset.rank);
+      if (rank >= 0) result[rank] = btn.dataset.value;
+    });
+    return result.filter(Boolean);
+  };
+  const morningPref = getOrderedPrefs('morning-route-pref');
+  const eveningPref = getOrderedPrefs('evening-route-pref');
   const gender      = document.querySelector('#edit-gender-group .st-btn.active')?.dataset.value || null;
   const backup      = document.getElementById('edit-backup-toggle')?.checked || false;
 
-  state.staff[editingIndex] = makeStaff(name, dayShifts, morningPref || null, eveningPref || null, gender, backup);
+  state.staff[editingIndex] = makeStaff(name, dayShifts, morningPref, eveningPref, gender, backup);
   editingIndex = null;
   closeEditStaffModal();
   persist();
@@ -523,8 +549,10 @@ function renderStaff() {
 
   listEl.innerHTML = state.staff.map((s, i) => {
     const prefParts = [];
-    if (s.morningRoutePref) prefParts.push(`早:${s.morningRoutePref}`);
-    if (s.eveningRoutePref) prefParts.push(`晚:${s.eveningRoutePref}`);
+    const mp = Array.isArray(s.morningRoutePref) ? s.morningRoutePref : (s.morningRoutePref ? [s.morningRoutePref] : []);
+    const ep = Array.isArray(s.eveningRoutePref) ? s.eveningRoutePref : (s.eveningRoutePref ? [s.eveningRoutePref] : []);
+    if (mp.length) prefParts.push(`早:${mp.join('>')}`);
+    if (ep.length) prefParts.push(`晚:${ep.join('>')}`);
     const prefText = prefParts.join('・');
     return `
     <div class="staff-row">
@@ -712,7 +740,8 @@ function loadFromStorage() {
           dates.forEach(d => { dayShifts[d] = shiftType; });
           return makeStaff(s.name, dayShifts);
         }
-        return s;
+        const normPref = p => Array.isArray(p) ? p.filter(Boolean) : (p ? [p] : []);
+        return { ...s, morningRoutePref: normPref(s.morningRoutePref), eveningRoutePref: normPref(s.eveningRoutePref) };
       });
     }
     if (data.schedule)  state.schedule  = data.schedule;
