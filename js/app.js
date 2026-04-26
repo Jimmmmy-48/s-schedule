@@ -543,19 +543,28 @@ function renderStaff() {
   countEl.textContent = state.staff.length;
 
   if (state.staff.length === 0) {
-    listEl.innerHTML = '<p class="strip-empty">尚未新增人員</p>';
+    listEl.innerHTML = '<p class="sidebar-empty">尚未新增人員</p>';
     return;
   }
 
   listEl.innerHTML = state.staff.map((s, i) => {
-    const genderTag = s.gender ? `<span class="gender-tag gender-${escAttr(s.gender)}">${escHtml(s.gender)}</span>` : '';
-    const backupTag = s.backup ? `<span class="backup-tag">備用</span>` : '';
-    return `<div class="staff-chip">
-      ${genderTag}
-      <span class="chip-name">${escHtml(s.name)}</span>
-      ${backupTag}
-      <button class="chip-btn chip-edit" onclick="editStaff(${i})" title="編輯">✎</button>
-      <button class="chip-btn chip-remove" onclick="removeStaff(${i})" title="移除">×</button>
+    const prefParts = [];
+    const mp = Array.isArray(s.morningRoutePref) ? s.morningRoutePref : (s.morningRoutePref ? [s.morningRoutePref] : []);
+    const ep = Array.isArray(s.eveningRoutePref) ? s.eveningRoutePref : (s.eveningRoutePref ? [s.eveningRoutePref] : []);
+    if (mp.length) prefParts.push(`早:${mp.join('>')}`);
+    if (ep.length) prefParts.push(`晚:${ep.join('>')}`);
+    const prefText = prefParts.join('・');
+    return `
+    <div class="staff-row">
+      <div class="staff-row-main">
+        ${s.gender ? `<span class="gender-tag gender-${escAttr(s.gender)}">${escHtml(s.gender)}</span>` : ''}
+        <span class="staff-row-name">${escHtml(s.name)}</span>
+        ${s.backup ? `<span class="backup-tag">備用</span>` : ''}
+        <button class="btn-edit-staff" onclick="editStaff(${i})" title="編輯">✎</button>
+        <button class="btn-remove-staff" onclick="removeStaff(${i})" title="移除">×</button>
+      </div>
+      <span class="staff-days-text">${daysAvailableText(s.dayShifts)}</span>
+      ${prefText ? `<span class="staff-pref-text">偏好 ${escHtml(prefText)}</span>` : ''}
     </div>`;
   }).join('');
 }
