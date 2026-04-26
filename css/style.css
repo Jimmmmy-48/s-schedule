@@ -1,8 +1,8 @@
 /* ── Variables ──────────────────────────────────────────────────────────────── */
 :root {
-  --primary:        #2563eb;
-  --primary-dark:   #1d4ed8;
-  --primary-light:  #eff6ff;
+  --primary:        #EE4D2D;
+  --primary-dark:   #D73211;
+  --primary-light:  #FFF3F0;
   --morning:        #d97706;
   --morning-bg:     #fef3c7;
   --morning-border: #fcd34d;
@@ -280,7 +280,7 @@ body {
   white-space: nowrap;
   flex-shrink: 0;
 }
-.badge-both    { background: #dbeafe; color: #1d4ed8; }
+.badge-both    { background: var(--primary-light); color: var(--primary); }
 .badge-morning { background: var(--morning-bg); color: var(--morning); }
 .badge-evening { background: var(--evening-bg); color: var(--evening); }
 
@@ -299,7 +299,7 @@ body {
   border-radius: 50%;
   transition: background .1s, color .1s;
 }
-.btn-edit-staff:hover { background: #e0f2fe; color: var(--primary); }
+.btn-edit-staff:hover { background: var(--primary-light); color: var(--primary); }
 
 /* Edit staff modal text input */
 .edit-text-input {
@@ -774,7 +774,7 @@ body {
 }
 .bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--primary), #60a5fa);
+  background: linear-gradient(90deg, var(--primary), #FF9A7B);
   border-radius: 4px;
   transition: width .3s;
 }
@@ -906,7 +906,7 @@ body {
 /* ── Store Calc Block (sidebar) ─────────────────────────────────────────────── */
 .store-calc-block {
   background: var(--primary-light);
-  border: 1px solid #bfdbfe;
+  border: 1px solid #FFCAB9;
   border-radius: var(--radius-sm);
   padding: 10px 12px;
   margin-top: 4px;
