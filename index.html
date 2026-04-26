@@ -17,145 +17,114 @@
     </div>
   </header>
 
-  <!-- ── Body ───────────────────────────────────────────────────────────── -->
-  <div class="app-body">
+  <!-- ── Top Panel ──────────────────────────────────────────────────────── -->
+  <div class="top-panel">
+    <div class="tp-controls">
 
-    <!-- Sidebar -->
-    <aside class="sidebar">
-
-      <!-- ─ 排班設定 ─ -->
-      <div class="sidebar-section">
-        <div class="sidebar-title">排班設定</div>
-
+      <!-- 排班設定 -->
+      <div class="tp-section">
+        <div class="tp-label">排班設定</div>
         <div class="date-row">
           <label for="start-date">排班開始日期</label>
           <input type="date" id="start-date">
         </div>
-
         <button class="btn btn-primary" onclick="generateSchedule()">
           ⚡ 產生排班
         </button>
       </div>
 
-      <!-- ─ 人員管理 ─ -->
-      <div class="sidebar-section">
-        <div class="sidebar-title">
+      <!-- 人員管理 -->
+      <div class="tp-section tp-section-staff">
+        <div class="tp-label">
           人員管理
           <span id="staff-count" style="color:var(--primary);margin-left:4px">0</span> 人
         </div>
-
         <div class="staff-input-row">
           <input type="text" id="staff-input"
             placeholder="輸入姓名，Enter 新增"
             autocomplete="off">
           <button class="btn btn-secondary btn-sm" onclick="addStaff()">新增</button>
         </div>
-
-        <div class="form-field">
-          <span class="form-label">性別</span>
+        <div class="tp-options-row">
           <div class="shift-type-group" id="add-gender-group">
             <button class="st-btn" data-value="男" onclick="setAddGender(this.dataset.value)">男</button>
             <button class="st-btn" data-value="女" onclick="setAddGender(this.dataset.value)">女</button>
           </div>
-        </div>
-
-        <!-- Default shift type applied to all 14 days on add -->
-        <div class="form-field">
-          <span class="form-label">新增預設班別</span>
           <div class="shift-type-group" id="shift-type-group">
-            <button class="st-btn active" data-value="both"    onclick="setShiftType('both')">早晚班</button>
-            <button class="st-btn"        data-value="morning" onclick="setShiftType('morning')">僅早班</button>
-            <button class="st-btn"        data-value="evening" onclick="setShiftType('evening')">僅晚班</button>
+            <button class="st-btn active" data-value="both"    onclick="setShiftType('both')">早晚</button>
+            <button class="st-btn"        data-value="morning" onclick="setShiftType('morning')">早</button>
+            <button class="st-btn"        data-value="evening" onclick="setShiftType('evening')">晚</button>
           </div>
+          <label class="backup-inline-label">
+            <input type="checkbox" id="add-backup-toggle">備用
+          </label>
         </div>
-
-        <div class="form-field">
-          <span class="form-label">預設偏好路線（早班）</span>
+        <div class="tp-options-row">
           <select id="add-morning-route" class="route-select"></select>
-        </div>
-        <div class="form-field">
-          <span class="form-label">預設偏好路線（晚班）</span>
           <select id="add-evening-route" class="route-select"></select>
         </div>
-
-        <div class="form-field" style="flex-direction:row;align-items:center;gap:8px;margin-bottom:6px">
-          <input type="checkbox" id="add-backup-toggle" style="margin:0">
-          <label for="add-backup-toggle" class="form-label" style="margin:0;cursor:pointer">備用人員（缺人才排班）</label>
-        </div>
-
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">
-          新增後可點擊 ✎ 設定每天的班別
-        </div>
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">
-          可貼上多筆，用換行或逗號分隔
-        </div>
-
-        <div class="sidebar-link-row">
+        <div class="sidebar-link-row" style="margin-top:4px">
           <button class="link-btn" onclick="importSampleStaff()">載入人員資料</button>
           <button class="link-btn danger" onclick="clearAllStaff()">清除全部</button>
         </div>
       </div>
 
-      <!-- ─ 店家設定 ─ -->
-      <div class="sidebar-section">
-        <div class="sidebar-title">店家設定</div>
-
+      <!-- 店家設定 -->
+      <div class="tp-section">
+        <div class="tp-label">店家設定</div>
         <div class="setting-field">
           <label for="setting-store-count">店家總數</label>
           <input type="number" id="setting-store-count" min="1" max="500" value="28"
             oninput="updateStoreCount()">
         </div>
-
         <div class="sidebar-link-row" style="margin-top:8px">
           <button class="link-btn" onclick="openStoreNamesModal()">自訂店名</button>
         </div>
       </div>
 
-      <!-- ─ Staff List ─ -->
-      <div class="sidebar-section">
-        <div id="staff-list" class="staff-list">
-          <p class="sidebar-empty">尚未新增人員</p>
-        </div>
-      </div>
+    </div>
 
-    </aside>
-
-    <!-- Main Content -->
-    <main class="main-content">
-
-      <div class="tabs">
-        <button class="tab-btn active" data-tab="schedule" onclick="switchTab('schedule')">排班表</button>
-        <button class="tab-btn" data-tab="stores"   onclick="switchTab('stores')">店家分配</button>
-        <button class="tab-btn" data-tab="stats"    onclick="switchTab('stats')">人員統計</button>
-      </div>
-
-      <div class="tab-panels">
-
-        <div class="tab-panel active" id="tab-schedule">
-          <div class="empty-state">
-            <div class="empty-icon">📅</div>
-            <p>請先新增人員，設定開始日期，然後點擊「產生排班」</p>
-          </div>
-        </div>
-
-        <!-- 店家分配 -->
-        <div class="tab-panel" id="tab-stores">
-          <div class="empty-state">
-            <div class="empty-icon">🏪</div>
-            <p>產生排班後可查看店家分配</p>
-          </div>
-        </div>
-
-        <div class="tab-panel" id="tab-stats">
-          <div class="empty-state">
-            <div class="empty-icon">📊</div>
-            <p>產生排班後可查看統計</p>
-          </div>
-        </div>
-
-      </div>
-    </main>
+    <!-- Staff strip -->
+    <div class="staff-strip" id="staff-list">
+      <p class="strip-empty">尚未新增人員</p>
+    </div>
   </div>
+
+  <!-- ── Main Content ────────────────────────────────────────────────────── -->
+  <main class="main-content">
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="schedule" onclick="switchTab('schedule')">排班表</button>
+      <button class="tab-btn" data-tab="stores"   onclick="switchTab('stores')">店家分配</button>
+      <button class="tab-btn" data-tab="stats"    onclick="switchTab('stats')">人員統計</button>
+    </div>
+
+    <div class="tab-panels">
+
+      <div class="tab-panel active" id="tab-schedule">
+        <div class="empty-state">
+          <div class="empty-icon">📅</div>
+          <p>請先新增人員，設定開始日期，然後點擊「產生排班」</p>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-stores">
+        <div class="empty-state">
+          <div class="empty-icon">🏪</div>
+          <p>產生排班後可查看店家分配</p>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-stats">
+        <div class="empty-state">
+          <div class="empty-icon">📊</div>
+          <p>產生排班後可查看統計</p>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
 </div>
 
 <!-- ── Add-to-shift Modal ──────────────────────────────────────────────────── -->
