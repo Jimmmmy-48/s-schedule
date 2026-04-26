@@ -16,7 +16,7 @@ const MORNING_ROUTES = [
   { label: '路線五',  stores: ['江山', '世界', '大同'] },
   { label: '路線六',  stores: ['東山', '寶山', '食品'] },
   { label: '路線七',  stores: ['東光', '博愛', '自由'] },
-  { label: '路線八',  stores: ['寶山雙園', '高翠'] },
+  { label: '路線八',  stores: ['雙園', '高翠'] },
   { label: '路線九',  stores: ['關埔', '埔頂'] },
   { label: '路線十',  stores: ['世傑', '埔頂二', '慈雲'] },
 ];
@@ -692,6 +692,10 @@ function loadFromStorage() {
       state.storeSettings = { ...state.storeSettings, ...data.storeSettings };
       if (!state.storeSettings.customNames || state.storeSettings.customNames.length === 0) {
         state.storeSettings.customNames = DEFAULT_STORE_NAMES;
+      } else {
+        state.storeSettings.customNames = state.storeSettings.customNames.map(n =>
+          n.replace(/\s*[(（][^)）]*[)）]/g, '').replace('寶山雙園', '雙園').trim()
+        );
       }
     }
   } catch (_) {}
