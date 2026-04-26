@@ -18,6 +18,11 @@ const Scheduler = {
       if (s.eveningRoutePref) eveningPrefs[s.name] = s.eveningRoutePref;
     });
 
+    const regularStaff = staff.filter(s => !s.backup);
+    const backupStaff  = staff.filter(s => s.backup);
+    const minMorning   = morningRoutes ? morningRoutes.length : 1;
+    const minEvening   = eveningRoutes ? eveningRoutes.length : 1;
+
     const schedule = [];
     const start = new Date(startDate + 'T00:00:00');
 
@@ -25,13 +30,19 @@ const Scheduler = {
       const date = new Date(start);
       date.setDate(date.getDate() + i);
 
-      const eligibleMorning = staff.filter(s => this._canMorning(s, i));
+      const eligRegularMorning = regularStaff.filter(s => this._canMorning(s, i));
+      const eligBackupMorning  = eligRegularMorning.length < minMorning
+        ? backupStaff.filter(s => this._canMorning(s, i))
+        : [];
+      const eligibleMorning = [...eligRegularMorning, ...eligBackupMorning];
       const morning         = this._prioritizedOrder(eligibleMorning, counts);
       const morningNameSet  = new Set(morning.map(s => s.name));
 
-      const eligibleEvening = staff.filter(s =>
-        this._canEvening(s, i) && !morningNameSet.has(s.name)
-      );
+      const eligRegularEvening = regularStaff.filter(s => this._canEvening(s, i) && !morningNameSet.has(s.name));
+      const eligBackupEvening  = eligRegularEvening.length < minEvening
+        ? backupStaff.filter(s => this._canEvening(s, i) && !morningNameSet.has(s.name))
+        : [];
+      const eligibleEvening = [...eligRegularEvening, ...eligBackupEvening];
       const evening = this._prioritizedOrder(eligibleEvening, counts);
 
       morning.forEach(s => { counts[s.name].morning++; counts[s.name].total++; });

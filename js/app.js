@@ -85,13 +85,14 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ── Staff helpers ─────────────────────────────────────────────────────────────
-function makeStaff(name, dayShifts, morningRoutePref, eveningRoutePref, gender) {
+function makeStaff(name, dayShifts, morningRoutePref, eveningRoutePref, gender, backup) {
   return {
     name,
     dayShifts: { ...(dayShifts || {}) },
     morningRoutePref: morningRoutePref || null,
     eveningRoutePref: eveningRoutePref || null,
     gender: gender || null,
+    backup: backup || false,
   };
 }
 
@@ -161,13 +162,14 @@ function addStaff() {
 
   const morningRoute = document.getElementById('add-morning-route')?.value || null;
   const eveningRoute = document.getElementById('add-evening-route')?.value || null;
-  const gender = document.querySelector('#add-gender-group .st-btn.active')?.dataset.value || null;
+  const gender  = document.querySelector('#add-gender-group .st-btn.active')?.dataset.value || null;
+  const backup  = document.getElementById('add-backup-toggle')?.checked || false;
 
   const names = raw.split(/[\n,，、]+/).map(s => s.trim()).filter(Boolean);
   let added = 0;
   names.forEach(name => {
     if (!state.staff.find(s => s.name === name)) {
-      state.staff.push(makeStaff(name, makeUniformDayShifts(addFormShiftType), morningRoute || null, eveningRoute || null, gender));
+      state.staff.push(makeStaff(name, makeUniformDayShifts(addFormShiftType), morningRoute || null, eveningRoute || null, gender, backup));
       added++;
     }
   });
@@ -236,12 +238,12 @@ function importSampleStaff() {
     { name: '吳秉叡',  dayShifts: {0:'evening',1:'evening',2:'evening',3:'evening',4:'evening',5:'evening',6:'evening',7:'evening',8:'evening',9:'evening',10:'evening',11:'evening',12:'evening',13:'evening'}, morningRoutePref: null, eveningRoutePref: null },
     { name: '楊韻如',  dayShifts: {0:'evening',3:'evening',4:'evening',6:'evening',9:'evening',10:'evening',13:'evening'}, morningRoutePref: null, eveningRoutePref: null },
     { name: '謝燕宣',  dayShifts: {0:'evening',1:'evening',2:'evening',3:'evening',4:'evening',5:'evening',6:'evening',7:'evening',8:'evening',9:'evening',10:'evening',11:'evening',12:'evening',13:'evening'}, morningRoutePref: null, eveningRoutePref: null },
-    { name: '店長',    dayShifts: {0:'both',1:'both',2:'both',3:'both',4:'both',5:'both',6:'both',7:'both',8:'both',9:'both',10:'both',11:'both',12:'both',13:'both'}, morningRoutePref: null, eveningRoutePref: null },
+    { name: '店長',    dayShifts: {0:'both',1:'both',2:'both',3:'both',4:'both',5:'both',6:'both',7:'both',8:'both',9:'both',10:'both',11:'both',12:'both',13:'both'}, morningRoutePref: null, eveningRoutePref: null, backup: true },
   ];
   let added = 0;
   samples.forEach(s => {
     if (!state.staff.find(st => st.name === s.name)) {
-      state.staff.push(makeStaff(s.name, s.dayShifts, s.morningRoutePref, s.eveningRoutePref));
+      state.staff.push(makeStaff(s.name, s.dayShifts, s.morningRoutePref, s.eveningRoutePref, s.gender || null, s.backup || false));
       added++;
     }
   });
@@ -259,6 +261,7 @@ function editStaff(index) {
   document.querySelectorAll('#edit-gender-group .st-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.value === (s.gender || null));
   });
+  document.getElementById('edit-backup-toggle').checked = !!s.backup;
   renderDateGrid(s.dayShifts || {});
   renderRoutePrefButtons('morning', s.morningRoutePref || null);
   renderRoutePrefButtons('evening', s.eveningRoutePref || null);
@@ -365,8 +368,9 @@ function saveEditStaff() {
   const morningPref = document.querySelector('#morning-route-pref .route-pref-btn.active')?.dataset.value || null;
   const eveningPref = document.querySelector('#evening-route-pref .route-pref-btn.active')?.dataset.value || null;
   const gender      = document.querySelector('#edit-gender-group .st-btn.active')?.dataset.value || null;
+  const backup      = document.getElementById('edit-backup-toggle')?.checked || false;
 
-  state.staff[editingIndex] = makeStaff(name, dayShifts, morningPref || null, eveningPref || null, gender);
+  state.staff[editingIndex] = makeStaff(name, dayShifts, morningPref || null, eveningPref || null, gender, backup);
   editingIndex = null;
   closeEditStaffModal();
   persist();
@@ -527,6 +531,7 @@ function renderStaff() {
       <div class="staff-row-main">
         ${s.gender ? `<span class="gender-tag gender-${escAttr(s.gender)}">${escHtml(s.gender)}</span>` : ''}
         <span class="staff-row-name">${escHtml(s.name)}</span>
+        ${s.backup ? `<span class="backup-tag">備用</span>` : ''}
         <button class="btn-edit-staff" onclick="editStaff(${i})" title="編輯">✎</button>
         <button class="btn-remove-staff" onclick="removeStaff(${i})" title="移除">×</button>
       </div>

@@ -78,6 +78,11 @@
           <select id="add-evening-route" class="route-select"></select>
         </div>
 
+        <div class="form-field" style="flex-direction:row;align-items:center;gap:8px;margin-bottom:6px">
+          <input type="checkbox" id="add-backup-toggle" style="margin:0">
+          <label for="add-backup-toggle" class="form-label" style="margin:0;cursor:pointer">備用人員（缺人才排班）</label>
+        </div>
+
         <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">
           新增後可點擊 ✎ 設定每天的班別
         </div>
@@ -187,6 +192,11 @@
           <button class="st-btn" data-value="男" onclick="setEditGender('男')">男</button>
           <button class="st-btn" data-value="女" onclick="setEditGender('女')">女</button>
         </div>
+      </div>
+
+      <div class="form-field" style="flex-direction:row;align-items:center;gap:8px">
+        <input type="checkbox" id="edit-backup-toggle" style="margin:0">
+        <label for="edit-backup-toggle" class="form-label" style="margin:0;cursor:pointer">備用人員（缺人才排班）</label>
       </div>
 
       <!-- Per-day shift type grid -->
