@@ -259,7 +259,7 @@ function editStaff(index) {
 
   document.getElementById('edit-name-input').value = s.name;
   document.querySelectorAll('#edit-gender-group .st-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.value === (s.gender || null));
+    btn.classList.toggle('active', !!s.gender && btn.dataset.value === s.gender);
   });
   document.getElementById('edit-backup-toggle').checked = !!s.backup;
   renderDateGrid(s.dayShifts || {});

@@ -54,8 +54,8 @@
         <div class="form-field">
           <span class="form-label">性別</span>
           <div class="shift-type-group" id="add-gender-group">
-            <button class="st-btn" data-value="男" onclick="setAddGender('男')">男</button>
-            <button class="st-btn" data-value="女" onclick="setAddGender('女')">女</button>
+            <button class="st-btn" data-value="男" onclick="setAddGender(this.dataset.value)">男</button>
+            <button class="st-btn" data-value="女" onclick="setAddGender(this.dataset.value)">女</button>
           </div>
         </div>
 
@@ -189,8 +189,8 @@
       <div class="form-field">
         <span class="form-label">性別</span>
         <div class="shift-type-group" id="edit-gender-group">
-          <button class="st-btn" data-value="男" onclick="setEditGender('男')">男</button>
-          <button class="st-btn" data-value="女" onclick="setEditGender('女')">女</button>
+          <button class="st-btn" data-value="男" onclick="setEditGender(this.dataset.value)">男</button>
+          <button class="st-btn" data-value="女" onclick="setEditGender(this.dataset.value)">女</button>
         </div>
       </div>
 
