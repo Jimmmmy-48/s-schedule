@@ -1132,7 +1132,7 @@ body {
 
 /* ── Sidebar Resizer (desktop drag handle) ───────────────────────────────────── */
 .sidebar-resizer {
-  width: 5px;
+  width: 3px;
   background: var(--border);
   cursor: col-resize;
   flex-shrink: 0;

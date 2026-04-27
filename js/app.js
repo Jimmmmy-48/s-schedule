@@ -97,6 +97,7 @@ function initSidebarResizer() {
 
   let startX, startWidth;
   resizer.addEventListener('mousedown', e => {
+    e.preventDefault();
     startX     = e.clientX;
     startWidth = sidebar.getBoundingClientRect().width;
     resizer.classList.add('dragging');
