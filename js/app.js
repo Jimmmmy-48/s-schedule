@@ -82,7 +82,51 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('store-names-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeStoreNamesModal();
   });
+
+  initSidebarResizer();
 });
+
+// ── Sidebar resize & mobile toggle ───────────────────────────────────────────
+function initSidebarResizer() {
+  const resizer = document.getElementById('sidebar-resizer');
+  const sidebar = document.getElementById('sidebar');
+  if (!resizer || !sidebar) return;
+
+  const saved = localStorage.getItem('sidebar-width');
+  if (saved) { sidebar.style.width = saved; sidebar.style.minWidth = saved; }
+
+  let startX, startWidth;
+  resizer.addEventListener('mousedown', e => {
+    startX     = e.clientX;
+    startWidth = sidebar.getBoundingClientRect().width;
+    resizer.classList.add('dragging');
+    document.body.style.cursor    = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onMove = e => {
+      const w = Math.min(480, Math.max(180, startWidth + e.clientX - startX));
+      sidebar.style.width    = w + 'px';
+      sidebar.style.minWidth = w + 'px';
+    };
+    const onUp = () => {
+      resizer.classList.remove('dragging');
+      document.body.style.cursor    = '';
+      document.body.style.userSelect = '';
+      localStorage.setItem('sidebar-width', sidebar.style.width);
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+}
+
+function toggleSidebar() {
+  const sidebar  = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  const isOpen   = sidebar.classList.toggle('open');
+  backdrop.classList.toggle('open', isOpen);
+}
 
 // ── Staff helpers ─────────────────────────────────────────────────────────────
 function makeStaff(name, dayShifts, morningRoutePref, eveningRoutePref, gender, backup) {

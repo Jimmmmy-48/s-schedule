@@ -1130,6 +1130,66 @@ body {
 }
 .store-names-ta:focus { border-color: var(--primary); }
 
+/* ── Sidebar Resizer (desktop drag handle) ───────────────────────────────────── */
+.sidebar-resizer {
+  width: 5px;
+  background: var(--border);
+  cursor: col-resize;
+  flex-shrink: 0;
+  transition: background .15s;
+  z-index: 10;
+}
+.sidebar-resizer:hover,
+.sidebar-resizer.dragging {
+  background: var(--primary);
+}
+
+/* ── Sidebar Toggle Button ───────────────────────────────────────────────────── */
+.btn-sidebar-toggle {
+  display: none;
+  background: rgba(255,255,255,.15);
+  border: none;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: 4px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.btn-sidebar-toggle:hover { background: rgba(255,255,255,.25); }
+
+/* ── Sidebar Backdrop (mobile) ───────────────────────────────────────────────── */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  z-index: 99;
+}
+.sidebar-backdrop.open { display: block; }
+
+/* ── Mobile layout ───────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .btn-sidebar-toggle { display: inline-flex; align-items: center; }
+
+  .sidebar {
+    position: fixed;
+    top: 52px;
+    left: 0;
+    bottom: 0;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+    box-shadow: 4px 0 16px rgba(0,0,0,.18);
+    width: 280px !important;
+    min-width: 280px !important;
+  }
+  .sidebar.open { transform: translateX(0); }
+
+  .sidebar-resizer { display: none; }
+}
+
 /* ── Print ───────────────────────────────────────────────────────────────────── */
 @media print {
   .sidebar, .app-header, .tabs, .schedule-actions, .btn-add-tag,

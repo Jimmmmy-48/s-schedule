@@ -12,6 +12,7 @@
   <!-- ── Header ─────────────────────────────────────────────────────────── -->
   <header class="app-header">
     <div style="display:flex;align-items:center;gap:8px">
+      <button class="btn-sidebar-toggle" id="sidebar-toggle" onclick="toggleSidebar()" title="開關側邊欄">☰</button>
       <h1>排班系統</h1>
       <span class="header-sub">兩週排班・早班 / 晚班</span>
     </div>
@@ -20,8 +21,11 @@
   <!-- ── Body ───────────────────────────────────────────────────────────── -->
   <div class="app-body">
 
+    <!-- Mobile overlay backdrop -->
+    <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="toggleSidebar()"></div>
+
     <!-- Sidebar -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
 
       <!-- ─ 排班設定 ─ -->
       <div class="sidebar-section">
@@ -119,6 +123,9 @@
       </div>
 
     </aside>
+
+    <!-- Drag resizer (desktop only) -->
+    <div class="sidebar-resizer" id="sidebar-resizer"></div>
 
     <!-- Main Content -->
     <main class="main-content">
