@@ -184,33 +184,29 @@ const Scheduler = {
       const name = ordered[i];
       if (!name) continue;
       if (i === r) {
-        // Extra person 1: zone-aware extraction — prefer zones 1 & 2 (have shipping stores)
-        let donorName = null, donorMax = 1;
+        // Extra person 1: if zone 1 or 2 routes exist → SCS+packing; else extract 2 from zone 3
+        const hasPreferredZone = Object.values(assignments).flat()
+          .some(st => { const z = storeZoneMap[st]; return z === 1 || z === 2; });
 
-        // Pass 1: routes that contain at least one zone-1 or zone-2 store
-        Object.entries(assignments).forEach(([p, s]) => {
-          if (s.length > donorMax && s.some(st => { const z = storeZoneMap[st]; return z === 1 || z === 2; })) {
-            donorMax = s.length; donorName = p;
-          }
-        });
-        // Pass 2: fallback — any route with 2+ stores
-        if (!donorName) {
-          donorMax = 1;
+        if (hasPreferredZone) {
+          assignments[name] = [];
+          routeInfo[name] = { label: 'SCS上架', earlyStart: false, isExtra: true, extraType: 'scs' };
+        } else {
+          // Only zone 3 routes: extract up to 2 stores from heaviest route
+          let donorName = null, donorMax = 0;
           Object.entries(assignments).forEach(([p, s]) => {
             if (s.length > donorMax) { donorMax = s.length; donorName = p; }
           });
-        }
-
-        if (donorName) {
-          const donorStores = assignments[donorName];
-          const allZone3 = donorStores.every(st => (storeZoneMap[st] || 0) === 3);
-          const extractCount = (allZone3 && donorStores.length >= 2) ? 2 : 1;
-          const extracted = donorStores.splice(donorStores.length - extractCount, extractCount);
-          assignments[name] = extracted;
-          routeInfo[name] = { label: '支援', earlyStart: false, isExtra: true, extraType: 'store' };
-        } else {
-          assignments[name] = [];
-          routeInfo[name] = { label: 'SCS上架', earlyStart: false, isExtra: true, extraType: 'scs' };
+          if (donorName) {
+            const donorStores = assignments[donorName];
+            const count = Math.min(2, donorStores.length);
+            const extracted = donorStores.splice(donorStores.length - count, count);
+            assignments[name] = extracted;
+            routeInfo[name] = { label: '支援', earlyStart: false, isExtra: true, extraType: 'store' };
+          } else {
+            assignments[name] = [];
+            routeInfo[name] = { label: 'SCS上架', earlyStart: false, isExtra: true, extraType: 'scs' };
+          }
         }
       } else {
         // Extra person 2: packing
