@@ -879,12 +879,27 @@ function renderStoreAssignment() {
       if (!entries.length) return '<tr><td colspan="3" class="store-no-staff">無排班人員</td></tr>';
       return entries.map(([name, stores]) => {
         const ri = routeInfoMap?.[name];
-        const routeBadge = ri?.label ? `<span class="route-badge">${escHtml(ri.label)}</span>` : '';
+        const isExtra = ri?.isExtra;
+        const badgeClass = isExtra ? 'route-badge route-badge-extra' : 'route-badge';
+        const routeBadge = ri?.label ? `<span class="${badgeClass}">${escHtml(ri.label)}</span>` : '';
         const earlyBadge = (showEarlyStart && ri?.earlyStart) ? `<span class="early-start-badge">18:00起</span>` : '';
-        return `<tr>
+
+        let storesHtml, countHtml;
+        if (ri?.extraType === 'packing') {
+          storesHtml = `<span class="extra-task-badge extra-packing">打包</span>`;
+          countHtml  = '—';
+        } else if (ri?.extraType === 'scs') {
+          storesHtml = `<span class="extra-task-badge extra-scs">SCS 上架</span>`;
+          countHtml  = '—';
+        } else {
+          storesHtml = stores.map(s => `<span class="store-chip">${escHtml(s)}</span>`).join('');
+          countHtml  = `${stores.length}家`;
+        }
+
+        return `<tr${isExtra ? ' class="row-extra-staff"' : ''}>
           <td class="sa-person">${escHtml(name)}${ri ? `<div class="sa-route-info">${routeBadge}${earlyBadge}</div>` : ''}</td>
-          <td class="sa-stores">${stores.map(s => `<span class="store-chip">${escHtml(s)}</span>`).join('')}</td>
-          <td class="sa-count">${stores.length}家</td>
+          <td class="sa-stores">${storesHtml}</td>
+          <td class="sa-count">${countHtml}</td>
         </tr>`;
       }).join('');
     }

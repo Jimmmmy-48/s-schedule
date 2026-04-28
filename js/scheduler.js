@@ -178,6 +178,31 @@ const Scheduler = {
       routeInfo[name] = { label: routes[i].label, earlyStart: this._routeEarlyStart(routes[i].stores) };
     }
 
+    // Extra staff beyond routes (max 2)
+    for (let i = r; i < Math.min(n, r + 2); i++) {
+      const name = ordered[i];
+      if (!name) continue;
+      if (i === r) {
+        // Extra person 1: extract 1 store from heaviest route, fallback to SCS
+        let donorName = null, donorMax = 1;
+        Object.entries(assignments).forEach(([p, s]) => {
+          if (s.length > donorMax) { donorMax = s.length; donorName = p; }
+        });
+        if (donorName) {
+          const store = assignments[donorName].pop();
+          assignments[name] = [store];
+          routeInfo[name] = { label: '支援', earlyStart: false, isExtra: true, extraType: 'store' };
+        } else {
+          assignments[name] = [];
+          routeInfo[name] = { label: 'SCS上架', earlyStart: false, isExtra: true, extraType: 'scs' };
+        }
+      } else {
+        // Extra person 2: packing
+        assignments[name] = [];
+        routeInfo[name] = { label: '打包', earlyStart: false, isExtra: true, extraType: 'packing' };
+      }
+    }
+
     // Routes beyond available staff count are marked unassigned
     const unassignedRoutes = r > n ? routesResolved.slice(n) : [];
 

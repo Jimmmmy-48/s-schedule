@@ -988,6 +988,21 @@ body {
 
 .store-no-staff { text-align: center; color: var(--text-muted); font-size: 12px; padding: 8px; }
 
+/* Extra staff rows (超額人員) */
+.row-extra-staff td { background: #f0fdf4; }
+.route-badge-extra  { background: #dcfce7; color: #166534; border-color: #86efac; }
+
+.extra-task-badge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 4px;
+  border: 1px solid;
+}
+.extra-packing { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+.extra-scs     { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+
 .sa-unassigned-row td { background: #fef2f2; }
 
 .unassigned-badge {
