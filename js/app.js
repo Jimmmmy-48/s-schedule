@@ -113,6 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderStaff();
   renderSchedule();
   renderStoreAssignment();
+  renderStoreCoverage();
   renderStats();
 
   document.getElementById('staff-input').addEventListener('keydown', e => {
@@ -519,6 +520,7 @@ function generateSchedule() {
     persist();
     renderSchedule();
     renderStoreAssignment();
+    renderStoreCoverage();
     renderStats();
     switchTab('schedule');
     showToast('排班已產生！');
@@ -533,6 +535,7 @@ function clearSchedule() {
   persist();
   renderSchedule();
   renderStoreAssignment();
+  renderStoreCoverage();
   renderStats();
 }
 
@@ -1008,6 +1011,107 @@ function renderStoreAssignment() {
   }).join('');
 
   container.innerHTML = blocks;
+}
+
+// ── Render: Store Coverage Tab ────────────────────────────────────────────────
+function renderStoreCoverage() {
+  const container = document.getElementById('tab-coverage');
+  if (!container) return;
+
+  if (!state.schedule || !state.schedule[0]?.storeAssignments) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🗺️</div>
+        <p>產生排班後可查看店家一覽</p>
+      </div>`;
+    return;
+  }
+
+  const allStores = getStoreNames();
+  const days = state.schedule;
+
+  // Invert assignments: store → dayIndex → { morning, evening }
+  const coverageMap = {};
+  allStores.forEach(s => { coverageMap[s] = {}; });
+
+  days.forEach((day, di) => {
+    const sa = day.storeAssignments || {};
+    Object.entries(sa.morning || {}).forEach(([person, stores]) => {
+      stores.forEach(s => {
+        if (!coverageMap[s]) coverageMap[s] = {};
+        if (!coverageMap[s][di]) coverageMap[s][di] = { morning: null, evening: null };
+        coverageMap[s][di].morning = person;
+      });
+    });
+    Object.entries(sa.evening || {}).forEach(([person, stores]) => {
+      stores.forEach(s => {
+        if (!coverageMap[s]) coverageMap[s] = {};
+        if (!coverageMap[s][di]) coverageMap[s][di] = { morning: null, evening: null };
+        coverageMap[s][di].evening = person;
+      });
+    });
+  });
+
+  // Group stores by zone in STORE_META order
+  const storesByZone = { 1: [], 2: [], 3: [] };
+  allStores.forEach(s => {
+    const z = STORE_META[s]?.zone;
+    if (z && storesByZone[z]) storesByZone[z].push(s);
+  });
+
+  const zoneLabels = { 1: '第一區', 2: '第二區', 3: '第三區' };
+
+  const dateHeaders = days.map(day => {
+    const isWeekend = day.dayOfWeek === '六' || day.dayOfWeek === '日';
+    return `<th class="cov-date-th${isWeekend ? ' cov-weekend' : ''}">${formatDateDisplay(day.date)}<br><span class="cov-dow">${day.dayOfWeek}</span></th>`;
+  }).join('');
+
+  let tableBody = '';
+  [1, 2, 3].forEach(z => {
+    const stores = storesByZone[z];
+    if (!stores.length) return;
+
+    tableBody += `<tr class="cov-zone-row"><td colspan="${days.length + 1}" class="cov-zone-header">${zoneLabels[z]}</td></tr>`;
+
+    stores.forEach(s => {
+      const meta = STORE_META[s];
+      const typeLabel = meta?.type === 'large' ? '大' : meta?.type === 'shipping' ? '寄件' : '小';
+      const typeCls   = meta?.type === 'large' ? 'cov-type-large' : meta?.type === 'shipping' ? 'cov-type-shipping' : 'cov-type-small';
+
+      const cells = days.map((day, di) => {
+        const entry = coverageMap[s]?.[di] || {};
+        const m = entry.morning || null;
+        const e = entry.evening || null;
+        const isEmpty = !m && !e;
+        const mHtml = m ? `<span class="cov-person cov-person-m">${escHtml(m)}</span>` : '';
+        const eHtml = e ? `<span class="cov-person cov-person-e">${escHtml(e)}</span>` : '';
+        return `<td class="cov-cell${isEmpty ? ' cov-empty' : ''}">${mHtml}${eHtml}</td>`;
+      }).join('');
+
+      tableBody += `<tr class="cov-store-row">
+        <td class="cov-store-col"><span class="cov-type-badge ${typeCls}">${typeLabel}</span>${escHtml(s)}</td>
+        ${cells}
+      </tr>`;
+    });
+  });
+
+  container.innerHTML = `
+    <div class="cov-wrap">
+      <div class="cov-legend">
+        <span class="cov-person cov-person-m">早班</span>
+        <span class="cov-person cov-person-e">晚班</span>
+        <span class="cov-empty-legend">空格 = 無人</span>
+      </div>
+      <div class="table-wrap">
+        <table class="cov-table">
+          <thead><tr>
+            <th class="cov-store-th">店家</th>
+            ${dateHeaders}
+          </tr></thead>
+          <tbody>${tableBody}</tbody>
+        </table>
+      </div>
+    </div>`;
 }
 
 // ── Utilities ─────────────────────────────────────────────────────────────────

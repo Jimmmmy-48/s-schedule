@@ -133,6 +133,7 @@
       <div class="tabs">
         <button class="tab-btn active" data-tab="schedule" onclick="switchTab('schedule')">排班表</button>
         <button class="tab-btn" data-tab="stores"   onclick="switchTab('stores')">店家分配</button>
+        <button class="tab-btn" data-tab="coverage" onclick="switchTab('coverage')">店家一覽</button>
         <button class="tab-btn" data-tab="stats"    onclick="switchTab('stats')">人員統計</button>
       </div>
 
@@ -150,6 +151,14 @@
           <div class="empty-state">
             <div class="empty-icon">🏪</div>
             <p>產生排班後可查看店家分配</p>
+          </div>
+        </div>
+
+        <!-- 店家一覽 -->
+        <div class="tab-panel" id="tab-coverage">
+          <div class="empty-state">
+            <div class="empty-icon">🗺️</div>
+            <p>產生排班後可查看店家一覽</p>
           </div>
         </div>
 
