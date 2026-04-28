@@ -36,6 +36,51 @@ const EVENING_ROUTES = [
   { label: '路線十二', stores: ['世傑', '埔頂二', '慈雲'] },
 ];
 
+// ── Store Metadata (type & zone) ─────────────────────────────────────────────
+const STORE_META = {
+  // 第一區
+  '民生':  { type: 'large',    zone: 1 },
+  '民主':  { type: 'shipping', zone: 1 },
+  '自由':  { type: 'small',    zone: 1 },
+  '鐵道':  { type: 'shipping', zone: 1 },
+  '經國':  { type: 'small',    zone: 1 },
+  '巨城':  { type: 'large',    zone: 1 },
+  '國華':  { type: 'small',    zone: 1 },
+  '世界':  { type: 'shipping', zone: 1 },
+  '大同':  { type: 'small',    zone: 1 },
+  '林森':  { type: 'shipping', zone: 1 },
+  '江山':  { type: 'small',    zone: 1 },
+  // 第二區
+  '南大二':{ type: 'large',    zone: 2 },
+  '陽光':  { type: 'small',    zone: 2 },
+  '雙園':  { type: 'small',    zone: 2 },
+  '高翠':  { type: 'small',    zone: 2 },
+  '寶山':  { type: 'small',    zone: 2 },
+  '食品':  { type: 'large',    zone: 2 },
+  '東山':  { type: 'small',    zone: 2 },
+  '竹蓮':  { type: 'small',    zone: 2 },
+  '博愛':  { type: 'small',    zone: 2 },
+  '東光':  { type: 'large',    zone: 2 },
+  '中華':  { type: 'large',    zone: 2 },
+  '振興':  { type: 'shipping', zone: 2 },
+  // 第三區（無寄件大店）
+  '埔頂':  { type: 'small',    zone: 3 },
+  '埔頂二':{ type: 'small',    zone: 3 },
+  '關埔':  { type: 'large',    zone: 3 },
+  '世傑':  { type: 'large',    zone: 3 },
+  '慈雲':  { type: 'small',    zone: 3 },
+};
+
+function getStoreZone(name) {
+  return STORE_META[name]?.zone || null;
+}
+
+// Returns the first 寄件大店 in the given zone, or null if none
+function getZoneShippingStore(zone) {
+  const entry = Object.entries(STORE_META).find(([, m]) => m.zone === zone && m.type === 'shipping');
+  return entry ? entry[0] : null;
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
 const state = {
   staff: [],
@@ -462,10 +507,14 @@ function generateSchedule() {
   state.startDate = dateVal;
 
   try {
+    const storeZoneMap = Object.fromEntries(
+      Object.entries(STORE_META).map(([n, m]) => [n, m.zone])
+    );
     state.schedule = Scheduler.generate(state.staff, dateVal, {
       stores: getStoreNames(),
       morningRoutes: MORNING_ROUTES,
       eveningRoutes: EVENING_ROUTES,
+      storeZoneMap,
     });
     persist();
     renderSchedule();
@@ -875,6 +924,15 @@ function renderStoreAssignment() {
     const eRouteInfo  = assignments.eveningRouteInfo || {};
 
     function buildRows(assignMap, routeInfoMap, showEarlyStart) {
+      // Dominant zone for SCS fallback (based on all stores assigned this shift)
+      const zoneCounts = {};
+      Object.values(assignMap).flat().forEach(s => {
+        const z = STORE_META[s]?.zone;
+        if (z) zoneCounts[z] = (zoneCounts[z] || 0) + 1;
+      });
+      const dominantZone = parseInt(Object.entries(zoneCounts).sort((a, b) => b[1] - a[1])[0]?.[0]);
+      const scsStore = dominantZone ? getZoneShippingStore(dominantZone) : null;
+
       const entries = Object.entries(assignMap);
       if (!entries.length) return '<tr><td colspan="3" class="store-no-staff">無排班人員</td></tr>';
       return entries.map(([name, stores]) => {
@@ -889,8 +947,17 @@ function renderStoreAssignment() {
           storesHtml = `<span class="extra-task-badge extra-packing">打包</span>`;
           countHtml  = '—';
         } else if (ri?.extraType === 'scs') {
-          storesHtml = `<span class="extra-task-badge extra-scs">SCS 上架</span>`;
+          const loc = scsStore ? ` @ ${escHtml(scsStore)}` : '';
+          storesHtml = `<span class="extra-task-badge extra-scs">SCS上架＋寄件打包${loc}</span>`;
           countHtml  = '—';
+        } else if (isExtra && ri?.extraType === 'store') {
+          const zone = stores[0] ? getStoreZone(stores[0]) : null;
+          const shipStore = zone ? getZoneShippingStore(zone) : null;
+          const chips = stores.map(s => `<span class="store-chip">${escHtml(s)}</span>`).join('');
+          storesHtml = shipStore
+            ? `<span class="extra-task-badge extra-scs">先→${escHtml(shipStore)} SCS＋打包</span> ${chips}`
+            : chips;
+          countHtml = `${stores.length}家`;
         } else {
           storesHtml = stores.map(s => `<span class="store-chip">${escHtml(s)}</span>`).join('');
           countHtml  = `${stores.length}家`;

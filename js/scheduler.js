@@ -4,6 +4,7 @@ const Scheduler = {
       days = 14,
       morningRoutes = null,
       eveningRoutes = null,
+      storeZoneMap = {},
     } = options;
 
     if (!staff || staff.length === 0) throw new Error('請先新增人員');
@@ -63,10 +64,10 @@ const Scheduler = {
       schedule.forEach(day => {
         if (morningRoutes || eveningRoutes) {
           const mResult = morningRoutes
-            ? this._distributeWithRoutes(day.morning, morningRoutes, stores, morningPrefs)
+            ? this._distributeWithRoutes(day.morning, morningRoutes, stores, morningPrefs, storeZoneMap)
             : { assignments: this._distribute(day.morning, stores), routeInfo: {} };
           const eResult = eveningRoutes
-            ? this._distributeWithRoutes(day.evening.staff, eveningRoutes, stores, eveningPrefs)
+            ? this._distributeWithRoutes(day.evening.staff, eveningRoutes, stores, eveningPrefs, storeZoneMap)
             : { assignments: this._distribute(day.evening.staff, stores), routeInfo: {} };
           day.storeAssignments = {
             morning: mResult.assignments,
@@ -108,7 +109,7 @@ const Scheduler = {
     return String(name).replace(/\s*[(（][^)）]*[)）]\s*$/, '').trim();
   },
 
-  _distributeWithRoutes(staffNames, routes, allStores, staffPrefs = {}) {
+  _distributeWithRoutes(staffNames, routes, allStores, staffPrefs = {}, storeZoneMap = {}) {
     if (!staffNames.length) return { assignments: {}, routeInfo: {}, unassignedRoutes: [] };
 
     const n = staffNames.length;
@@ -183,11 +184,23 @@ const Scheduler = {
       const name = ordered[i];
       if (!name) continue;
       if (i === r) {
-        // Extra person 1: extract 1 store from heaviest route, fallback to SCS
+        // Extra person 1: zone-aware extraction — prefer zones 1 & 2 (have shipping stores)
         let donorName = null, donorMax = 1;
+
+        // Pass 1: routes that contain at least one zone-1 or zone-2 store
         Object.entries(assignments).forEach(([p, s]) => {
-          if (s.length > donorMax) { donorMax = s.length; donorName = p; }
+          if (s.length > donorMax && s.some(st => { const z = storeZoneMap[st]; return z === 1 || z === 2; })) {
+            donorMax = s.length; donorName = p;
+          }
         });
+        // Pass 2: fallback — any route with 2+ stores
+        if (!donorName) {
+          donorMax = 1;
+          Object.entries(assignments).forEach(([p, s]) => {
+            if (s.length > donorMax) { donorMax = s.length; donorName = p; }
+          });
+        }
+
         if (donorName) {
           const store = assignments[donorName].pop();
           assignments[name] = [store];
