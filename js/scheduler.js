@@ -202,8 +202,11 @@ const Scheduler = {
         }
 
         if (donorName) {
-          const store = assignments[donorName].pop();
-          assignments[name] = [store];
+          const donorStores = assignments[donorName];
+          const allZone3 = donorStores.every(st => (storeZoneMap[st] || 0) === 3);
+          const extractCount = (allZone3 && donorStores.length >= 2) ? 2 : 1;
+          const extracted = donorStores.splice(donorStores.length - extractCount, extractCount);
+          assignments[name] = extracted;
           routeInfo[name] = { label: '支援', earlyStart: false, isExtra: true, extraType: 'store' };
         } else {
           assignments[name] = [];
