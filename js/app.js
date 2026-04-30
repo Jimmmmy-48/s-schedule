@@ -1248,11 +1248,46 @@ function renderStaffCoverage() {
 
   container.innerHTML = `
     <div class="scov-wrap">
-      <div class="scov-section-title scov-title-m">早班人員一覽</div>
-      ${buildTable('morning')}
-      <div class="scov-section-title scov-title-e">晚班人員一覽</div>
-      ${buildTable('evening')}
+      <div class="scov-export-bar">
+        <button class="btn btn-secondary btn-sm" onclick="exportCoverageImage('scov-morning','早班人員班表')">⬇ 早班匯出圖片</button>
+        <button class="btn btn-secondary btn-sm" onclick="exportCoverageImage('scov-evening','晚班人員班表')">⬇ 晚班匯出圖片</button>
+      </div>
+      <div id="scov-morning">
+        <div class="scov-section-title scov-title-m">早班人員一覽</div>
+        ${buildTable('morning')}
+      </div>
+      <div id="scov-evening">
+        <div class="scov-section-title scov-title-e">晚班人員一覽</div>
+        ${buildTable('evening')}
+      </div>
     </div>`;
+}
+
+// ── Export Coverage Image ─────────────────────────────────────────────────────
+async function exportCoverageImage(sectionId, filename) {
+  const el = document.getElementById(sectionId);
+  if (!el || typeof html2canvas === 'undefined') {
+    showToast('無法匯出，請稍後再試', 'error'); return;
+  }
+  showToast('產生圖片中…');
+  try {
+    // Temporarily remove sticky so html2canvas captures correctly
+    el.querySelectorAll('.scov-name-th, .scov-name-col').forEach(e => {
+      e.dataset._pos = e.style.position;
+      e.style.position = 'relative';
+    });
+    const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+    el.querySelectorAll('.scov-name-th, .scov-name-col').forEach(e => {
+      e.style.position = e.dataset._pos || '';
+    });
+    const link = document.createElement('a');
+    link.download = filename + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    showToast('圖片已下載');
+  } catch (err) {
+    showToast('匯出失敗', 'error');
+  }
 }
 
 // ── Store Meta Modal ──────────────────────────────────────────────────────────
