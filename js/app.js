@@ -406,10 +406,10 @@ function setRoutePref(type, value) {
   let newPrefs;
   if (idx >= 0) {
     newPrefs = currentPrefs.filter(v => v !== value);
-  } else if (currentPrefs.filter(Boolean).length < 2) {
+  } else if (currentPrefs.filter(Boolean).length < 3) {
     newPrefs = [...currentPrefs.filter(Boolean), value];
   } else {
-    showToast('最多選 2 個志願', 'warning');
+    showToast('最多選 3 個志願', 'warning');
     return;
   }
   renderRoutePrefButtons(type, newPrefs);
@@ -565,6 +565,7 @@ function toggleEndTime(dayIndex) {
 }
 
 function removeFromShift(dayIndex, shiftType, name) {
+  if (!confirm(`確定要從班表中移除「${name}」？`)) return;
   const day = state.schedule[dayIndex];
   if (shiftType === 'morning') {
     day.morning = day.morning.filter(s => s !== name);

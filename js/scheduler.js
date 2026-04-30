@@ -133,7 +133,7 @@ const Scheduler = {
     // Two-round preference matching: first preferences, then second preferences
     const winnerByRouteIdx = {};
     const alreadyWon = new Set();
-    for (let round = 0; round < 2; round++) {
+    for (let round = 0; round < 3; round++) {
       routes.forEach((rt, idx) => {
         if (idx in winnerByRouteIdx) return;
         const candidates = staffNames.filter(name => {
