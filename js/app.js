@@ -1323,8 +1323,8 @@ async function exportCoverageImage(sectionId, filename) {
   }
 }
 
-// ── Export Data Modal ────────────────────────────────────────────────────────
-function openExportDataModal() {
+// ── Copy Diagnostic Data ─────────────────────────────────────────────────────
+function copyDiagData() {
   const DOW = '日一二三四五六';
   const lines = [];
 
@@ -1335,7 +1335,7 @@ function openExportDataModal() {
     const mp = (s.morningRoutePref || []).join('>') || '無';
     const ep = (s.eveningRoutePref || []).join('>') || '無';
     const backup = s.backup ? ' [備用]' : '';
-    lines.push(`${s.name}${backup}  早班志願:${mp}  晚班志願:${ep}  ${days}`);
+    lines.push(`${s.name}${backup}  早:${mp}  晚:${ep}  ${days}`);
   });
 
   if (state.schedule && state.schedule.length) {
@@ -1350,28 +1350,27 @@ function openExportDataModal() {
 
   lines.push('');
   lines.push('=== 路線設定 ===');
-  lines.push('早班路線:');
+  lines.push('早班:');
   state.routes.morning.forEach(r => lines.push(`  ${r.label}: ${r.stores.join('・')}`));
-  lines.push('晚班路線:');
+  lines.push('晚班:');
   state.routes.evening.forEach(r => lines.push(`  ${r.label}: ${r.stores.join('・')}`));
 
-  document.getElementById('export-data-ta').value = lines.join('\n');
-  document.getElementById('export-data-modal').classList.add('active');
-}
-
-function closeExportDataModal() {
-  document.getElementById('export-data-modal').classList.remove('active');
-}
-
-function copyExportData() {
-  const ta = document.getElementById('export-data-ta');
-  ta.select();
-  try {
-    navigator.clipboard.writeText(ta.value).then(() => showToast('已複製'));
-  } catch {
-    document.execCommand('copy');
-    showToast('已複製');
-  }
+  const text = lines.join('\n');
+  navigator.clipboard.writeText(text)
+    .then(() => showToast('診斷資料已複製，請貼到對話中'))
+    .catch(() => {
+      // Fallback for browsers that block clipboard without HTTPS
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('診斷資料已複製，請貼到對話中');
+    });
 }
 
 // ── Store Meta Modal ──────────────────────────────────────────────────────────
