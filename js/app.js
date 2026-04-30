@@ -1232,13 +1232,15 @@ function renderStoreMetaTable() {
     </tr>`;
   }).join('');
 
-  document.getElementById('store-meta-table').innerHTML = `
-    <thead><tr>
-      <th class="smeta-th-name">店家</th>
-      <th class="smeta-th">區域</th>
-      <th class="smeta-th">類型</th>
-    </tr></thead>
-    <tbody>${rows}</tbody>`;
+  document.getElementById('store-meta-wrap').innerHTML = `
+    <table class="smeta-table">
+      <thead><tr>
+        <th class="smeta-th-name">店家</th>
+        <th class="smeta-th">區域</th>
+        <th class="smeta-th">類型</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
 }
 
 function toggleStoreMeta(storeName, field, value) {
