@@ -124,18 +124,9 @@ document.addEventListener('DOMContentLoaded', () => {
   renderStaffCoverage();
   renderStats();
 
-  document.getElementById('staff-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); addStaff(); }
+  document.getElementById('staff-tab-search')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); renderStaffTab(); }
   });
-
-  // IME-aware search: don't filter mid-composition (fixes iPad 注音/拼音)
-  const searchEl = document.getElementById('staff-tab-search');
-  if (searchEl) {
-    let composing = false;
-    searchEl.addEventListener('compositionstart', () => { composing = true; });
-    searchEl.addEventListener('compositionend',   () => { composing = false; renderStaffTab(); });
-    searchEl.addEventListener('input', () => { if (!composing) renderStaffTab(); });
-  }
   document.getElementById('add-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeAddModal();
   });
