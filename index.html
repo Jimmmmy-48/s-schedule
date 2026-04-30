@@ -116,6 +116,7 @@
 
         <div class="sidebar-link-row" style="margin-top:8px">
           <button class="link-btn" onclick="openStoreNamesModal()">自訂店名</button>
+          <button class="link-btn" onclick="openStoreMetaModal()">區域設定</button>
         </div>
       </div>
 
@@ -289,6 +290,26 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeStoreNamesModal()">取消</button>
         <button class="btn btn-primary" style="width:auto;padding:7px 20px" onclick="saveStoreNames()">儲存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Store Meta Modal ───────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="store-meta-modal">
+  <div class="modal-box modal-box-wide">
+    <div class="modal-header">
+      <h3>店家區域設定</h3>
+      <button class="btn-modal-close" onclick="closeStoreMetaModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-hint">設定每家店的區域與類型，影響「店家一覽」的分組顯示</p>
+      <div class="table-wrap">
+        <table class="smeta-table" id="store-meta-table"></table>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="resetStoreMeta()">重設預設</button>
+        <button class="btn btn-primary" style="width:auto;padding:7px 20px" onclick="closeStoreMetaModal()">完成</button>
       </div>
     </div>
   </div>

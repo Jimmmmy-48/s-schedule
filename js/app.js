@@ -72,12 +72,11 @@ const STORE_META = {
 };
 
 function getStoreZone(name) {
-  return STORE_META[name]?.zone || null;
+  return state.storeMeta[name]?.zone || null;
 }
 
-// Returns the first 寄件大店 in the given zone, or null if none
 function getZoneShippingStore(zone) {
-  const entry = Object.entries(STORE_META).find(([, m]) => m.zone === zone && m.type === 'shipping');
+  const entry = Object.entries(state.storeMeta).find(([, m]) => m.zone === zone && m.type === 'shipping');
   return entry ? entry[0] : null;
 }
 
@@ -94,6 +93,7 @@ const state = {
     morning: MORNING_ROUTES.map(r => ({ ...r, stores: [...r.stores] })),
     evening: EVENING_ROUTES.map(r => ({ ...r, stores: [...r.stores] })),
   },
+  storeMeta: Object.fromEntries(Object.entries(STORE_META).map(([k, v]) => [k, { ...v }])),
   activeTab: 'schedule',
 };
 
@@ -134,6 +134,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('store-names-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeStoreNamesModal();
+  });
+  document.getElementById('store-meta-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeStoreMetaModal();
   });
   document.getElementById('routes-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeRoutesModal();
@@ -827,6 +830,7 @@ function persist() {
       startDate: state.startDate,
       storeSettings: state.storeSettings,
       routes: state.routes,
+      storeMeta: state.storeMeta,
     }));
   } catch (_) {}
 }
@@ -856,6 +860,9 @@ function loadFromStorage() {
       state.routes = data.routes;
       if (!Array.isArray(state.routes.morning)) state.routes.morning = MORNING_ROUTES.map(r => ({ ...r, stores: [...r.stores] }));
       if (!Array.isArray(state.routes.evening)) state.routes.evening = EVENING_ROUTES.map(r => ({ ...r, stores: [...r.stores] }));
+    }
+    if (data.storeMeta && typeof data.storeMeta === 'object') {
+      state.storeMeta = { ...state.storeMeta, ...data.storeMeta };
     }
     if (data.storeSettings) {
       state.storeSettings = { ...state.storeSettings, ...data.storeSettings };
@@ -1034,10 +1041,10 @@ function renderStoreCoverage() {
     });
   });
 
-  // Group stores by zone in STORE_META order
+  // Group stores by zone
   const storesByZone = { 1: [], 2: [], 3: [] };
   allStores.forEach(s => {
-    const z = STORE_META[s]?.zone;
+    const z = state.storeMeta[s]?.zone;
     if (z && storesByZone[z]) storesByZone[z].push(s);
   });
 
@@ -1056,7 +1063,7 @@ function renderStoreCoverage() {
     tableBody += `<tr class="cov-zone-row"><td colspan="${days.length + 1}" class="cov-zone-header">${zoneLabels[z]}</td></tr>`;
 
     stores.forEach(s => {
-      const meta = STORE_META[s];
+      const meta = state.storeMeta[s];
       const typeLabel = meta?.type === 'large' ? '大' : meta?.type === 'shipping' ? '寄件' : '小';
       const typeCls   = meta?.type === 'large' ? 'cov-type-large' : meta?.type === 'shipping' ? 'cov-type-shipping' : 'cov-type-small';
 
@@ -1187,6 +1194,71 @@ function renderStaffCoverage() {
         </table>
       </div>
     </div>`;
+}
+
+// ── Store Meta Modal ──────────────────────────────────────────────────────────
+function openStoreMetaModal() {
+  renderStoreMetaTable();
+  document.getElementById('store-meta-modal').classList.add('active');
+}
+
+function closeStoreMetaModal() {
+  document.getElementById('store-meta-modal').classList.remove('active');
+}
+
+function renderStoreMetaTable() {
+  const stores = getStoreNames();
+  const zoneOpts = [1, 2, 3];
+  const typeOpts = [
+    { value: 'large',    label: '大店' },
+    { value: 'small',    label: '小店' },
+    { value: 'shipping', label: '寄件' },
+  ];
+
+  const rows = stores.map(s => {
+    const meta = state.storeMeta[s] || {};
+    const zoneBtns = zoneOpts.map(z =>
+      `<button class="smeta-btn${meta.zone === z ? ' active' : ''}"
+        onclick="toggleStoreMeta('${escAttr(s)}','zone',${z})">${z}區</button>`
+    ).join('');
+    const typeBtns = typeOpts.map(t =>
+      `<button class="smeta-btn${meta.type === t.value ? ' active' : ''}"
+        onclick="toggleStoreMeta('${escAttr(s)}','type','${t.value}')">${t.label}</button>`
+    ).join('');
+    return `<tr>
+      <td class="smeta-name">${escHtml(s)}</td>
+      <td><div class="smeta-btn-group">${zoneBtns}</div></td>
+      <td><div class="smeta-btn-group">${typeBtns}</div></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('store-meta-table').innerHTML = `
+    <thead><tr>
+      <th class="smeta-th-name">店家</th>
+      <th class="smeta-th">區域</th>
+      <th class="smeta-th">類型</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>`;
+}
+
+function toggleStoreMeta(storeName, field, value) {
+  if (!state.storeMeta[storeName]) state.storeMeta[storeName] = {};
+  const current = state.storeMeta[storeName][field];
+  state.storeMeta[storeName][field] = current === value ? undefined : value;
+  persist();
+  renderStoreMetaTable();
+  if (state.schedule) {
+    renderStoreCoverage();
+  }
+}
+
+function resetStoreMeta() {
+  if (!confirm('確定重設為預設區域設定？')) return;
+  state.storeMeta = Object.fromEntries(Object.entries(STORE_META).map(([k, v]) => [k, { ...v }]));
+  persist();
+  renderStoreMetaTable();
+  if (state.schedule) renderStoreCoverage();
+  showToast('已重設為預設區域設定');
 }
 
 // ── Route Management Modal ────────────────────────────────────────────────────

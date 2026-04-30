@@ -1227,6 +1227,62 @@ body {
   .schedule-header { margin-bottom: 10px; }
 }
 
+/* ── Store Meta Modal ────────────────────────────────────────────────────────── */
+.smeta-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+}
+
+.smeta-table th, .smeta-table td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  vertical-align: middle;
+}
+
+.smeta-th-name {
+  text-align: left;
+  min-width: 80px;
+  background: var(--surface);
+  font-weight: 600;
+}
+
+.smeta-th {
+  text-align: left;
+  background: var(--surface);
+  font-weight: 600;
+}
+
+.smeta-name {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.smeta-btn-group {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.smeta-btn {
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background .12s, color .12s, border-color .12s;
+}
+
+.smeta-btn.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.smeta-table tbody tr:hover { background: #f8fafc; }
+
 /* ── Staff Coverage Table ────────────────────────────────────────────────────── */
 .scov-wrap { padding: 12px; }
 
