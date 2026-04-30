@@ -180,9 +180,13 @@
 
         <!-- 人員列表 -->
         <div class="tab-panel active" id="tab-staff-list">
-          <div class="empty-state">
-            <div class="empty-icon">👥</div>
-            <p>尚未新增人員</p>
+          <div class="stab-wrap">
+            <div class="stab-toolbar">
+              <input type="text" id="staff-tab-search" class="stab-search"
+                placeholder="搜尋姓名…" autocomplete="off">
+              <span class="stab-count" id="stab-count"></span>
+            </div>
+            <div id="stab-grid"></div>
           </div>
         </div>
 

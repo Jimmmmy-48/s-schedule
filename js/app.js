@@ -127,6 +127,15 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('staff-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') { e.preventDefault(); addStaff(); }
   });
+
+  // IME-aware search: don't filter mid-composition (fixes iPad 注音/拼音)
+  const searchEl = document.getElementById('staff-tab-search');
+  if (searchEl) {
+    let composing = false;
+    searchEl.addEventListener('compositionstart', () => { composing = true; });
+    searchEl.addEventListener('compositionend',   () => { composing = false; renderStaffTab(); });
+    searchEl.addEventListener('input', () => { if (!composing) renderStaffTab(); });
+  }
   document.getElementById('add-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeAddModal();
   });
@@ -684,25 +693,22 @@ function renderStaff() {
 }
 
 // ── Render: Staff Tab ─────────────────────────────────────────────────────────
-function renderStaffTab(query) {
-  const container = document.getElementById('tab-staff-list');
-  if (!container) return;
+function renderStaffTab() {
+  const gridEl  = document.getElementById('stab-grid');
+  const countEl = document.getElementById('stab-count');
+  if (!gridEl) return;
+
+  const q = document.getElementById('staff-tab-search')?.value.trim().toLowerCase() ?? '';
+  const filtered = q ? state.staff.filter(s => s.name.toLowerCase().includes(q)) : state.staff;
+
+  if (countEl) countEl.textContent = `${filtered.length} / ${state.staff.length} 人`;
 
   if (state.staff.length === 0) {
-    container.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">👥</div>
-        <p>尚未新增人員</p>
-      </div>`;
+    gridEl.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><p>尚未新增人員</p></div>';
     return;
   }
 
-  const q = (query ?? document.getElementById('staff-tab-search')?.value ?? '').trim().toLowerCase();
-  const filtered = q
-    ? state.staff.filter(s => s.name.toLowerCase().includes(q))
-    : state.staff;
-
-  const cards = filtered.map((s, i) => {
+  const cards = filtered.map(s => {
     const realIdx = state.staff.indexOf(s);
     const mp = Array.isArray(s.morningRoutePref) ? s.morningRoutePref : (s.morningRoutePref ? [s.morningRoutePref] : []);
     const ep = Array.isArray(s.eveningRoutePref) ? s.eveningRoutePref : (s.eveningRoutePref ? [s.eveningRoutePref] : []);
@@ -727,21 +733,9 @@ function renderStaffTab(query) {
       </div>`;
   }).join('');
 
-  container.innerHTML = `
-    <div class="stab-wrap">
-      <div class="stab-toolbar">
-        <input type="text" id="staff-tab-search" class="stab-search"
-          placeholder="搜尋姓名…" autocomplete="off"
-          oninput="renderStaffTab()"
-          value="${escAttr(q)}">
-        <span class="stab-count">${filtered.length} / ${state.staff.length} 人</span>
-      </div>
-      <div class="stab-grid">${filtered.length ? cards : '<p class="sidebar-empty" style="padding:16px">無符合人員</p>'}</div>
-    </div>`;
-
-  // Keep focus and cursor position after re-render
-  const input = document.getElementById('staff-tab-search');
-  if (input && q) { input.focus(); input.setSelectionRange(q.length, q.length); }
+  gridEl.innerHTML = filtered.length
+    ? `<div class="stab-grid">${cards}</div>`
+    : '<p class="sidebar-empty" style="padding:16px">無符合人員</p>';
 }
 
 // ── Render: Schedule Table ────────────────────────────────────────────────────
