@@ -40,7 +40,8 @@ const Scheduler = {
       const morning         = this._prioritizedOrder(eligibleMorning, counts);
       const morningNameSet  = new Set(morning.map(s => s.name));
 
-      const eligRegularEvening = regularStaff.filter(s => this._canEvening(s, i) && !morningNameSet.has(s.name));
+      // 早晚班 = eligible for both shifts on the same day
+      const eligRegularEvening = regularStaff.filter(s => this._canEvening(s, i));
       const eligBackupEvening  = eligRegularEvening.length < minEvening
         ? backupStaff.filter(s => this._canEvening(s, i) && !morningNameSet.has(s.name))
         : [];
@@ -127,14 +128,34 @@ const Scheduler = {
       stores: rt.stores.map(s => normalizedToActual[this._normalizeName(s)] || s),
     }));
 
+    // When routes exceed staff, randomly rotate which routes get dropped each day.
+    // Routes with staff preferences are always kept; the rest are shuffled.
+    let coveredRoutes;
+    let unassignedRoutes;
+    if (r > n) {
+      const preferredLabels = new Set(staffNames.flatMap(name => staffPrefs[name] || []));
+      const withPref    = routesResolved.filter(rt =>  preferredLabels.has(rt.label));
+      const withoutPref = routesResolved.filter(rt => !preferredLabels.has(rt.label));
+      for (let i = withoutPref.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [withoutPref[i], withoutPref[j]] = [withoutPref[j], withoutPref[i]];
+      }
+      const combined = [...withPref, ...withoutPref];
+      coveredRoutes    = combined.slice(0, n);
+      unassignedRoutes = combined.slice(n);
+    } else {
+      coveredRoutes    = routesResolved;
+      unassignedRoutes = [];
+    }
+
     const assignments = {};
     const routeInfo = {};
 
-    // Two-round preference matching: first preferences, then second preferences
+    // Three-round preference matching
     const winnerByRouteIdx = {};
     const alreadyWon = new Set();
     for (let round = 0; round < 3; round++) {
-      routes.forEach((rt, idx) => {
+      coveredRoutes.forEach((rt, idx) => {
         if (idx in winnerByRouteIdx) return;
         const candidates = staffNames.filter(name => {
           if (alreadyWon.has(name)) return false;
@@ -169,17 +190,14 @@ const Scheduler = {
       }
     }
 
-    // Assign one route per person; extra staff get no stores
-    const assignCount = Math.min(n, r);
+    // Assign one route per person
+    const assignCount = Math.min(n, coveredRoutes.length);
     for (let i = 0; i < assignCount; i++) {
       const name = ordered[i];
       if (!name) continue;
-      assignments[name] = [...routesResolved[i].stores];
-      routeInfo[name] = { label: routes[i].label, earlyStart: this._routeEarlyStart(routes[i].stores) };
+      assignments[name] = [...coveredRoutes[i].stores];
+      routeInfo[name] = { label: coveredRoutes[i].label, earlyStart: this._routeEarlyStart(coveredRoutes[i].stores) };
     }
-
-    // Routes beyond available staff count are marked unassigned
-    const unassignedRoutes = r > n ? routesResolved.slice(n) : [];
 
     return { assignments, routeInfo, unassignedRoutes };
   },
