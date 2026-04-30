@@ -44,8 +44,8 @@ body {
 .app-header {
   background: var(--primary);
   color: #fff;
-  padding: 0 20px;
-  height: 52px;
+  padding: 6px 20px;
+  min-height: 52px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -55,13 +55,9 @@ body {
 }
 
 .app-header h1 { font-size: 18px; font-weight: 700; letter-spacing: 0.03em; }
-.header-sub    { font-size: 12px; opacity: .75; margin-left: 10px; }
-.header-notice {
-  font-size: 11px;
-  opacity: .65;
-  text-align: right;
-  line-height: 1.6;
-}
+.header-sub    { font-size: 12px; opacity: .75; }
+.header-notice { font-size: 11px; opacity: .75; margin-top: 2px; }
+.header-sig    { font-size: 11px; opacity: .75; align-self: flex-end; }
 
 /* Body: sidebar + content */
 .app-body {
