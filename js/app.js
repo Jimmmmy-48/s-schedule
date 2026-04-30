@@ -117,6 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
   populateRouteSelects();
 
   renderStaff();
+  renderStaffTab();
   renderSchedule();
   renderStoreAssignment();
   renderStoreCoverage();
@@ -282,6 +283,7 @@ function addStaff() {
   document.getElementById('staff-input').value = '';
   persist();
   renderStaff();
+  renderStaffTab();
   if (added) showToast(`已新增 ${added} 位人員`);
 }
 
@@ -289,6 +291,7 @@ function removeStaff(index) {
   state.staff.splice(index, 1);
   persist();
   renderStaff();
+  renderStaffTab();
   renderSchedule();
   renderStats();
 }
@@ -298,6 +301,7 @@ function clearAllStaff() {
   state.staff = [];
   persist();
   renderStaff();
+  renderStaffTab();
   renderSchedule();
   renderStats();
 }
@@ -354,6 +358,7 @@ function importSampleStaff() {
   });
   persist();
   renderStaff();
+  renderStaffTab();
   if (added) showToast(`已載入 ${added} 位人員`);
 }
 
@@ -505,6 +510,7 @@ function saveEditStaff() {
   closeEditStaffModal();
   persist();
   renderStaff();
+  renderStaffTab();
   renderStats();
   showToast('人員設定已更新');
 }
@@ -675,6 +681,67 @@ function renderStaff() {
       ${prefText ? `<span class="staff-pref-text">偏好 ${escHtml(prefText)}</span>` : ''}
     </div>`;
   }).join('');
+}
+
+// ── Render: Staff Tab ─────────────────────────────────────────────────────────
+function renderStaffTab(query) {
+  const container = document.getElementById('tab-staff-list');
+  if (!container) return;
+
+  if (state.staff.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">👥</div>
+        <p>尚未新增人員</p>
+      </div>`;
+    return;
+  }
+
+  const q = (query ?? document.getElementById('staff-tab-search')?.value ?? '').trim().toLowerCase();
+  const filtered = q
+    ? state.staff.filter(s => s.name.toLowerCase().includes(q))
+    : state.staff;
+
+  const cards = filtered.map((s, i) => {
+    const realIdx = state.staff.indexOf(s);
+    const mp = Array.isArray(s.morningRoutePref) ? s.morningRoutePref : (s.morningRoutePref ? [s.morningRoutePref] : []);
+    const ep = Array.isArray(s.eveningRoutePref) ? s.eveningRoutePref : (s.eveningRoutePref ? [s.eveningRoutePref] : []);
+    const prefParts = [];
+    if (mp.length) prefParts.push(`早班偏好：${mp.join(' > ')}`);
+    if (ep.length) prefParts.push(`晚班偏好：${ep.join(' > ')}`);
+    return `
+      <div class="stab-card">
+        <div class="stab-card-header">
+          ${s.gender ? `<span class="gender-tag gender-${escAttr(s.gender)}">${escHtml(s.gender)}</span>` : ''}
+          <span class="stab-name">${escHtml(s.name)}</span>
+          ${s.backup ? `<span class="backup-tag">備用</span>` : ''}
+          <div class="stab-actions">
+            <button class="btn-edit-staff" onclick="editStaff(${realIdx})" title="編輯">✎</button>
+            <button class="btn-remove-staff" onclick="removeStaff(${realIdx})" title="移除">×</button>
+          </div>
+        </div>
+        <div class="stab-meta">
+          <span class="staff-days-text">${daysAvailableText(s.dayShifts)}</span>
+          ${prefParts.map(p => `<span class="staff-pref-text">${escHtml(p)}</span>`).join('')}
+        </div>
+      </div>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="stab-wrap">
+      <div class="stab-toolbar">
+        <input type="text" id="staff-tab-search" class="stab-search"
+          placeholder="搜尋姓名…" autocomplete="off"
+          oninput="renderStaffTab()"
+          value="${escAttr(q)}">
+        <span class="stab-count">${filtered.length} / ${state.staff.length} 人</span>
+      </div>
+      <div class="stab-grid">${filtered.length ? cards : '<p class="sidebar-empty" style="padding:16px">無符合人員</p>'}</div>
+    </div>`;
+
+  // Keep focus and cursor position after re-render
+  const input = document.getElementById('staff-tab-search');
+  if (input && q) { input.focus(); input.setSelectionRange(q.length, q.length); }
 }
 
 // ── Render: Schedule Table ────────────────────────────────────────────────────
