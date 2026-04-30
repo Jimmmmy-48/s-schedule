@@ -139,17 +139,15 @@
     <main class="main-content">
 
       <div class="tabs">
-        <button class="tab-btn active" data-tab="schedule" onclick="switchTab('schedule')">排班表</button>
-        <button class="tab-btn" data-tab="stores"   onclick="switchTab('stores')">店家分配</button>
-        <button class="tab-btn" data-tab="coverage"  onclick="switchTab('coverage')">店家一覽</button>
-        <button class="tab-btn" data-tab="staff-cov"  onclick="switchTab('staff-cov')">人員一覽</button>
-        <button class="tab-btn" data-tab="staff-list" onclick="switchTab('staff-list')">人員列表</button>
-        <button class="tab-btn" data-tab="stats"      onclick="switchTab('stats')">人員統計</button>
+        <button class="tab-btn active" data-tab="staff-list" onclick="switchTab('staff-list')">人員列表</button>
+        <button class="tab-btn" data-tab="staff-cov"  onclick="switchTab('staff-cov')">人員班表</button>
+        <button class="tab-btn" data-tab="coverage"   onclick="switchTab('coverage')">店家班表</button>
+        <button class="tab-btn" data-tab="stores"     onclick="switchTab('stores')">店家分配</button>
       </div>
 
       <div class="tab-panels">
 
-        <div class="tab-panel active" id="tab-schedule">
+        <div class="tab-panel" id="tab-schedule">
           <div class="empty-state">
             <div class="empty-icon">📅</div>
             <p>請先新增人員，設定開始日期，然後點擊「產生排班」</p>
@@ -181,7 +179,7 @@
         </div>
 
         <!-- 人員列表 -->
-        <div class="tab-panel" id="tab-staff-list">
+        <div class="tab-panel active" id="tab-staff-list">
           <div class="empty-state">
             <div class="empty-icon">👥</div>
             <p>尚未新增人員</p>

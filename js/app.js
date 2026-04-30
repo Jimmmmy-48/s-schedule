@@ -94,7 +94,7 @@ const state = {
     evening: EVENING_ROUTES.map(r => ({ ...r, stores: [...r.stores] })),
   },
   storeMeta: Object.fromEntries(Object.entries(STORE_META).map(([k, v]) => [k, { ...v }])),
-  activeTab: 'schedule',
+  activeTab: 'staff-list',
 };
 
 let addFormShiftType  = 'both';
@@ -538,7 +538,7 @@ function generateSchedule() {
     renderStoreCoverage();
     renderStaffCoverage();
     renderStats();
-    switchTab('schedule');
+    switchTab('staff-list');
     showToast('排班已產生！');
   } catch (e) {
     showToast(e.message, 'error');
