@@ -4,7 +4,6 @@ const Scheduler = {
       days = 14,
       morningRoutes = null,
       eveningRoutes = null,
-      storeZoneMap = {},
     } = options;
 
     if (!staff || staff.length === 0) throw new Error('請先新增人員');
@@ -64,10 +63,10 @@ const Scheduler = {
       schedule.forEach(day => {
         if (morningRoutes || eveningRoutes) {
           const mResult = morningRoutes
-            ? this._distributeWithRoutes(day.morning, morningRoutes, stores, morningPrefs, storeZoneMap)
+            ? this._distributeWithRoutes(day.morning, morningRoutes, stores, morningPrefs)
             : { assignments: this._distribute(day.morning, stores), routeInfo: {} };
           const eResult = eveningRoutes
-            ? this._distributeWithRoutes(day.evening.staff, eveningRoutes, stores, eveningPrefs, storeZoneMap)
+            ? this._distributeWithRoutes(day.evening.staff, eveningRoutes, stores, eveningPrefs)
             : { assignments: this._distribute(day.evening.staff, stores), routeInfo: {} };
           day.storeAssignments = {
             morning: mResult.assignments,
@@ -109,7 +108,7 @@ const Scheduler = {
     return String(name).replace(/\s*[(（][^)）]*[)）]\s*$/, '').trim();
   },
 
-  _distributeWithRoutes(staffNames, routes, allStores, staffPrefs = {}, storeZoneMap = {}) {
+  _distributeWithRoutes(staffNames, routes, allStores, staffPrefs = {}) {
     if (!staffNames.length) return { assignments: {}, routeInfo: {}, unassignedRoutes: [] };
 
     const n = staffNames.length;
@@ -177,42 +176,6 @@ const Scheduler = {
       if (!name) continue;
       assignments[name] = [...routesResolved[i].stores];
       routeInfo[name] = { label: routes[i].label, earlyStart: this._routeEarlyStart(routes[i].stores) };
-    }
-
-    // Extra staff beyond routes (max 2)
-    for (let i = r; i < Math.min(n, r + 2); i++) {
-      const name = ordered[i];
-      if (!name) continue;
-      if (i === r) {
-        // Extra person 1: if zone 1 or 2 routes exist → SCS+packing; else extract 2 from zone 3
-        const hasPreferredZone = Object.values(assignments).flat()
-          .some(st => { const z = storeZoneMap[st]; return z === 1 || z === 2; });
-
-        if (hasPreferredZone) {
-          assignments[name] = [];
-          routeInfo[name] = { label: 'SCS上架', earlyStart: false, isExtra: true, extraType: 'scs' };
-        } else {
-          // Only zone 3 routes: extract up to 2 stores from heaviest route
-          let donorName = null, donorMax = 0;
-          Object.entries(assignments).forEach(([p, s]) => {
-            if (s.length > donorMax) { donorMax = s.length; donorName = p; }
-          });
-          if (donorName) {
-            const donorStores = assignments[donorName];
-            const count = Math.min(2, donorStores.length);
-            const extracted = donorStores.splice(donorStores.length - count, count);
-            assignments[name] = extracted;
-            routeInfo[name] = { label: '支援', earlyStart: false, isExtra: true, extraType: 'store' };
-          } else {
-            assignments[name] = [];
-            routeInfo[name] = { label: 'SCS上架', earlyStart: false, isExtra: true, extraType: 'scs' };
-          }
-        }
-      } else {
-        // Extra person 2: packing
-        assignments[name] = [];
-        routeInfo[name] = { label: '打包', earlyStart: false, isExtra: true, extraType: 'packing' };
-      }
     }
 
     // Routes beyond available staff count are marked unassigned

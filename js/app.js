@@ -508,14 +508,10 @@ function generateSchedule() {
   state.startDate = dateVal;
 
   try {
-    const storeZoneMap = Object.fromEntries(
-      Object.entries(STORE_META).map(([n, m]) => [n, m.zone])
-    );
     state.schedule = Scheduler.generate(state.staff, dateVal, {
       stores: getStoreNames(),
       morningRoutes: MORNING_ROUTES,
       eveningRoutes: EVENING_ROUTES,
-      storeZoneMap,
     });
     persist();
     renderSchedule();
@@ -927,49 +923,17 @@ function renderStoreAssignment() {
     const eRouteInfo  = assignments.eveningRouteInfo || {};
 
     function buildRows(assignMap, routeInfoMap, showEarlyStart) {
-      // Dominant zone for SCS fallback (based on all stores assigned this shift)
-      const zoneCounts = {};
-      Object.values(assignMap).flat().forEach(s => {
-        const z = STORE_META[s]?.zone;
-        if (z) zoneCounts[z] = (zoneCounts[z] || 0) + 1;
-      });
-      const dominantZone = parseInt(Object.entries(zoneCounts).sort((a, b) => b[1] - a[1])[0]?.[0]);
-      const scsStore = dominantZone ? getZoneShippingStore(dominantZone) : null;
-
       const entries = Object.entries(assignMap);
       if (!entries.length) return '<tr><td colspan="3" class="store-no-staff">無排班人員</td></tr>';
       return entries.map(([name, stores]) => {
         const ri = routeInfoMap?.[name];
-        const isExtra = ri?.isExtra;
-        const badgeClass = isExtra ? 'route-badge route-badge-extra' : 'route-badge';
-        const routeBadge = ri?.label ? `<span class="${badgeClass}">${escHtml(ri.label)}</span>` : '';
+        const routeBadge = ri?.label ? `<span class="route-badge">${escHtml(ri.label)}</span>` : '';
         const earlyBadge = (showEarlyStart && ri?.earlyStart) ? `<span class="early-start-badge">18:00起</span>` : '';
-
-        let storesHtml, countHtml;
-        if (ri?.extraType === 'packing') {
-          storesHtml = `<span class="extra-task-badge extra-packing">打包</span>`;
-          countHtml  = '—';
-        } else if (ri?.extraType === 'scs') {
-          const loc = scsStore ? ` @ ${escHtml(scsStore)}` : '';
-          storesHtml = `<span class="extra-task-badge extra-scs">SCS上架＋寄件打包${loc}</span>`;
-          countHtml  = '—';
-        } else if (isExtra && ri?.extraType === 'store') {
-          const zone = stores[0] ? getStoreZone(stores[0]) : null;
-          const shipStore = zone ? getZoneShippingStore(zone) : null;
-          const chips = stores.map(s => `<span class="store-chip">${escHtml(s)}</span>`).join('');
-          storesHtml = shipStore
-            ? `<span class="extra-task-badge extra-scs">先→${escHtml(shipStore)} SCS＋打包</span> ${chips}`
-            : chips;
-          countHtml = `${stores.length}家`;
-        } else {
-          storesHtml = stores.map(s => `<span class="store-chip">${escHtml(s)}</span>`).join('');
-          countHtml  = `${stores.length}家`;
-        }
-
-        return `<tr${isExtra ? ' class="row-extra-staff"' : ''}>
+        const storesHtml = stores.map(s => `<span class="store-chip">${escHtml(s)}</span>`).join('');
+        return `<tr>
           <td class="sa-person">${escHtml(name)}${ri ? `<div class="sa-route-info">${routeBadge}${earlyBadge}</div>` : ''}</td>
           <td class="sa-stores">${storesHtml}</td>
-          <td class="sa-count">${countHtml}</td>
+          <td class="sa-count">${stores.length}家</td>
         </tr>`;
       }).join('');
     }
