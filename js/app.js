@@ -1249,8 +1249,8 @@ function renderStaffCoverage() {
   container.innerHTML = `
     <div class="scov-wrap">
       <div class="scov-export-bar">
-        <button class="btn btn-secondary btn-sm" onclick="exportCoverageImage('scov-morning','早班人員班表')">⬇ 早班匯出圖片</button>
-        <button class="btn btn-secondary btn-sm" onclick="exportCoverageImage('scov-evening','晚班人員班表')">⬇ 晚班匯出圖片</button>
+        <button class="btn btn-secondary btn-sm" onclick="exportCoverageImage('scov-morning','早班人員班表')">⬇ 早班匯出</button>
+        <button class="btn btn-secondary btn-sm" onclick="exportCoverageImage('scov-evening','晚班人員班表')">⬇ 晚班匯出</button>
       </div>
       <div id="scov-morning">
         <div class="scov-section-title scov-title-m">早班人員一覽</div>
@@ -1270,22 +1270,54 @@ async function exportCoverageImage(sectionId, filename) {
     showToast('無法匯出，請稍後再試', 'error'); return;
   }
   showToast('產生圖片中…');
+
+  const stickyEls = [];
+  const overflowEls = [];
+
   try {
-    // Temporarily remove sticky so html2canvas captures correctly
+    // Remove sticky positioning so columns don't repeat/misalign
     el.querySelectorAll('.scov-name-th, .scov-name-col').forEach(e => {
-      e.dataset._pos = e.style.position;
+      stickyEls.push({ el: e, pos: e.style.position });
       e.style.position = 'relative';
     });
-    const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
-    el.querySelectorAll('.scov-name-th, .scov-name-col').forEach(e => {
-      e.style.position = e.dataset._pos || '';
+
+    // Remove overflow constraints on all ancestors so the full table width is captured
+    let parent = el.parentElement;
+    while (parent && parent !== document.body) {
+      const computed = window.getComputedStyle(parent);
+      const ox = computed.overflowX;
+      const oy = computed.overflowY;
+      if (['auto', 'scroll', 'hidden'].includes(ox) || ['auto', 'scroll', 'hidden'].includes(oy)) {
+        overflowEls.push({ el: parent, ox: parent.style.overflowX, oy: parent.style.overflowY });
+        parent.style.overflowX = 'visible';
+        parent.style.overflowY = 'visible';
+      }
+      parent = parent.parentElement;
+    }
+
+    const canvas = await html2canvas(el, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      width: el.scrollWidth,
+      height: el.scrollHeight,
+      windowWidth: document.documentElement.scrollWidth,
+      windowHeight: document.documentElement.scrollHeight,
     });
+
+    // Restore sticky
+    stickyEls.forEach(({ el: e, pos }) => { e.style.position = pos; });
+    // Restore overflow
+    overflowEls.forEach(({ el: e, ox, oy }) => { e.style.overflowX = ox; e.style.overflowY = oy; });
+
     const link = document.createElement('a');
     link.download = filename + '.png';
     link.href = canvas.toDataURL('image/png');
     link.click();
     showToast('圖片已下載');
   } catch (err) {
+    stickyEls.forEach(({ el: e, pos }) => { e.style.position = pos; });
+    overflowEls.forEach(({ el: e, ox, oy }) => { e.style.overflowX = ox; e.style.overflowY = oy; });
     showToast('匯出失敗', 'error');
   }
 }
