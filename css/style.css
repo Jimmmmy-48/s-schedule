@@ -400,6 +400,14 @@ body {
 .btn-remove-staff:hover { background: #fee2e2; color: var(--danger); }
 
 .sidebar-empty { font-size: 13px; color: var(--text-muted); text-align: center; padding: 20px 0; }
+.sidebar-notice {
+  padding: 10px 16px 16px;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.7;
+  border-top: 1px solid var(--border);
+  margin-top: auto;
+}
 
 /* Settings */
 .settings-grid {
