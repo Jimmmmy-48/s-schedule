@@ -1323,6 +1323,58 @@ async function exportCoverageImage(sectionId, filename) {
   }
 }
 
+// ── Backup Export / Import ───────────────────────────────────────────────────
+function exportBackup() {
+  const data = {
+    version: 1,
+    staff: state.staff,
+    routes: state.routes,
+    storeMeta: state.storeMeta,
+    storeSettings: state.storeSettings,
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `排班備份_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('備份已下載');
+}
+
+function importBackup(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.staff || !Array.isArray(data.staff)) throw new Error('格式不正確');
+      if (!confirm(`匯入後將覆蓋目前所有資料（${data.staff.length} 位人員），確定嗎？`)) return;
+      if (data.staff)         state.staff         = data.staff;
+      if (data.routes)        state.routes        = data.routes;
+      if (data.storeMeta)     state.storeMeta     = data.storeMeta;
+      if (data.storeSettings) state.storeSettings = data.storeSettings;
+      state.schedule = [];
+      persist();
+      document.getElementById('setting-store-count').value = state.storeSettings.count;
+      populateRouteSelects();
+      renderStaff();
+      renderStaffTab();
+      renderSchedule();
+      renderStoreAssignment();
+      renderStoreCoverage();
+      renderStaffCoverage();
+      renderStats();
+      showToast(`已匯入 ${state.staff.length} 位人員`);
+    } catch (err) {
+      showToast('匯入失敗：' + err.message, 'error');
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
 // ── Copy Diagnostic Data ─────────────────────────────────────────────────────
 function copyDiagData() {
   const DOW = '日一二三四五六';

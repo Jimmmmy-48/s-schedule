@@ -105,6 +105,11 @@
           <button class="link-btn danger" onclick="clearAllStaff()">清除全部</button>
         </div>
         <div class="sidebar-link-row" style="margin-top:4px">
+          <button class="link-btn" onclick="exportBackup()">匯出備份</button>
+          <button class="link-btn" onclick="document.getElementById('import-backup-input').click()">匯入備份</button>
+          <input type="file" id="import-backup-input" accept=".json" style="display:none" onchange="importBackup(this)">
+        </div>
+        <div class="sidebar-link-row" style="margin-top:4px">
           <button class="link-btn" onclick="copyDiagData()">複製診斷資料</button>
         </div>
       </div>
