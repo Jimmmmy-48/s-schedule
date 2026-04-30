@@ -104,6 +104,9 @@
           <button class="link-btn" onclick="importSampleStaff()">載入人員資料</button>
           <button class="link-btn danger" onclick="clearAllStaff()">清除全部</button>
         </div>
+        <div class="sidebar-link-row" style="margin-top:4px">
+          <button class="link-btn" onclick="openExportDataModal()">匯出資料（診斷用）</button>
+        </div>
       </div>
 
       <!-- ─ 店家設定 ─ -->
@@ -352,6 +355,25 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="resetDefaultRoutes()">重設預設</button>
         <button class="btn btn-primary" style="width:auto;padding:7px 20px" onclick="closeRoutesModal()">完成</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Export Data Modal ──────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="export-data-modal">
+  <div class="modal-box modal-box-wide">
+    <div class="modal-header">
+      <h3>匯出資料（診斷用）</h3>
+      <button class="btn-modal-close" onclick="closeExportDataModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-hint">複製下方全部文字，貼給 Claude 協助診斷排班問題。</p>
+      <textarea id="export-data-ta" class="store-names-ta" rows="16" readonly
+        style="font-size:11px;font-family:monospace"></textarea>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeExportDataModal()">關閉</button>
+        <button class="btn btn-primary" style="width:auto;padding:7px 20px" onclick="copyExportData()">複製全部</button>
       </div>
     </div>
   </div>

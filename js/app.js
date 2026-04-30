@@ -1323,6 +1323,57 @@ async function exportCoverageImage(sectionId, filename) {
   }
 }
 
+// ── Export Data Modal ────────────────────────────────────────────────────────
+function openExportDataModal() {
+  const DOW = '日一二三四五六';
+  const lines = [];
+
+  lines.push('=== 人員班別設定 ===');
+  state.staff.forEach(s => {
+    const days = Object.entries(s.dayShifts || {})
+      .map(([d, v]) => `Day${d}:${v}`).join(' ') || '（未設定）';
+    const mp = (s.morningRoutePref || []).join('>') || '無';
+    const ep = (s.eveningRoutePref || []).join('>') || '無';
+    const backup = s.backup ? ' [備用]' : '';
+    lines.push(`${s.name}${backup}  早班志願:${mp}  晚班志願:${ep}  ${days}`);
+  });
+
+  if (state.schedule && state.schedule.length) {
+    lines.push('');
+    lines.push('=== 目前排班結果 ===');
+    state.schedule.forEach(day => {
+      const d = new Date(day.date + 'T00:00:00');
+      const dow = DOW[d.getDay()];
+      lines.push(`${day.date}(${dow}) 早:${day.morning.join('、') || '無'} 晚:${day.evening.staff.join('、') || '無'}`);
+    });
+  }
+
+  lines.push('');
+  lines.push('=== 路線設定 ===');
+  lines.push('早班路線:');
+  state.routes.morning.forEach(r => lines.push(`  ${r.label}: ${r.stores.join('・')}`));
+  lines.push('晚班路線:');
+  state.routes.evening.forEach(r => lines.push(`  ${r.label}: ${r.stores.join('・')}`));
+
+  document.getElementById('export-data-ta').value = lines.join('\n');
+  document.getElementById('export-data-modal').classList.add('active');
+}
+
+function closeExportDataModal() {
+  document.getElementById('export-data-modal').classList.remove('active');
+}
+
+function copyExportData() {
+  const ta = document.getElementById('export-data-ta');
+  ta.select();
+  try {
+    navigator.clipboard.writeText(ta.value).then(() => showToast('已複製'));
+  } catch {
+    document.execCommand('copy');
+    showToast('已複製');
+  }
+}
+
 // ── Store Meta Modal ──────────────────────────────────────────────────────────
 function openStoreMetaModal() {
   renderStoreMetaTable();
