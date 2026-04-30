@@ -90,13 +90,19 @@ const state = {
     count: 28,
     customNames: DEFAULT_STORE_NAMES,
   },
+  routes: {
+    morning: MORNING_ROUTES.map(r => ({ ...r, stores: [...r.stores] })),
+    evening: EVENING_ROUTES.map(r => ({ ...r, stores: [...r.stores] })),
+  },
   activeTab: 'schedule',
 };
 
-let addFormShiftType = 'both';
-let addFormGender    = null;
-let editingIndex     = null;
-let addModalCtx      = { dayIndex: null, shiftType: null };
+let addFormShiftType  = 'both';
+let addFormGender     = null;
+let editingIndex      = null;
+let addModalCtx       = { dayIndex: null, shiftType: null };
+let routeActiveShift  = 'morning';
+let routeEditIdx      = null;
 
 // Cycle order for each date-button click
 const SHIFT_CYCLE  = { both: 'morning', morning: 'evening', evening: null };
@@ -127,6 +133,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('store-names-modal').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeStoreNamesModal();
+  });
+  document.getElementById('routes-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeRoutesModal();
   });
 
   initSidebarResizer();
@@ -220,8 +229,8 @@ function populateRouteSelects() {
     el.innerHTML = '<option value="">無偏好</option>' +
       routes.map(r => `<option value="${escAttr(r.label)}">${escHtml(r.label)}（${escHtml(r.stores.join('・'))}）</option>`).join('');
   };
-  fill('add-morning-route', MORNING_ROUTES);
-  fill('add-evening-route', EVENING_ROUTES);
+  fill('add-morning-route', state.routes.morning);
+  fill('add-evening-route', state.routes.evening);
 }
 
 function setShiftType(value) {
@@ -362,7 +371,7 @@ function editStaff(index) {
 }
 
 function renderRoutePrefButtons(type, currentPrefs) {
-  const routes = type === 'morning' ? MORNING_ROUTES : EVENING_ROUTES;
+  const routes = type === 'morning' ? state.routes.morning : state.routes.evening;
   const el = document.getElementById(`${type}-route-pref`);
   if (!el) return;
   const prefs = Array.isArray(currentPrefs) ? currentPrefs.filter(Boolean) : (currentPrefs ? [currentPrefs] : []);
@@ -510,8 +519,8 @@ function generateSchedule() {
   try {
     state.schedule = Scheduler.generate(state.staff, dateVal, {
       stores: getStoreNames(),
-      morningRoutes: MORNING_ROUTES,
-      eveningRoutes: EVENING_ROUTES,
+      morningRoutes: state.routes.morning,
+      eveningRoutes: state.routes.evening,
     });
     persist();
     renderSchedule();
@@ -814,6 +823,7 @@ function persist() {
       staff: state.staff, schedule: state.schedule,
       startDate: state.startDate,
       storeSettings: state.storeSettings,
+      routes: state.routes,
     }));
   } catch (_) {}
 }
@@ -839,6 +849,11 @@ function loadFromStorage() {
     }
     if (data.schedule)  state.schedule  = data.schedule;
     if (data.startDate) state.startDate = data.startDate;
+    if (data.routes) {
+      state.routes = data.routes;
+      if (!Array.isArray(state.routes.morning)) state.routes.morning = MORNING_ROUTES.map(r => ({ ...r, stores: [...r.stores] }));
+      if (!Array.isArray(state.routes.evening)) state.routes.evening = EVENING_ROUTES.map(r => ({ ...r, stores: [...r.stores] }));
+    }
     if (data.storeSettings) {
       state.storeSettings = { ...state.storeSettings, ...data.storeSettings };
       if (!state.storeSettings.customNames || state.storeSettings.customNames.length === 0) {
@@ -1076,6 +1091,147 @@ function renderStoreCoverage() {
         </table>
       </div>
     </div>`;
+}
+
+// ── Route Management Modal ────────────────────────────────────────────────────
+function openRoutesModal(shift = 'morning') {
+  routeActiveShift = shift;
+  routeEditIdx = null;
+  document.querySelectorAll('.route-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.shift === shift);
+  });
+  renderRoutesInModal();
+  document.getElementById('routes-modal').classList.add('active');
+}
+
+function closeRoutesModal() {
+  document.getElementById('routes-modal').classList.remove('active');
+  routeEditIdx = null;
+}
+
+function switchRouteTab(shift) {
+  routeActiveShift = shift;
+  routeEditIdx = null;
+  document.querySelectorAll('.route-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.shift === shift);
+  });
+  renderRoutesInModal();
+}
+
+function renderRoutesInModal() {
+  const routes = state.routes[routeActiveShift];
+  const el = document.getElementById('routes-list');
+  if (!el) return;
+
+  let html = '';
+  routes.forEach((r, i) => {
+    if (routeEditIdx === i) {
+      html += buildRouteEditorHtml(r.label, r.stores, i);
+    } else {
+      html += `
+        <div class="route-item">
+          <div class="route-item-main">
+            <span class="route-item-label">${escHtml(r.label)}</span>
+            <span class="route-item-stores">${escHtml(r.stores.join('・'))}</span>
+          </div>
+          <div class="route-item-actions">
+            <button class="link-btn" onclick="startEditRoute(${i})">編輯</button>
+            <button class="link-btn danger" onclick="deleteRoute(${i})">刪除</button>
+          </div>
+        </div>`;
+    }
+  });
+
+  if (routeEditIdx === -1) {
+    html += buildRouteEditorHtml('', [], -1);
+  }
+
+  el.innerHTML = html || '<p style="color:var(--text-muted);padding:8px 0;font-size:13px">尚無路線</p>';
+}
+
+function buildRouteEditorHtml(label, selectedStores, idx) {
+  const allStores = getStoreNames();
+  const selectedSet = new Set(selectedStores);
+  const checkboxes = allStores.map(s =>
+    `<label class="store-check-label">
+      <input type="checkbox" value="${escAttr(s)}"${selectedSet.has(s) ? ' checked' : ''}> ${escHtml(s)}
+    </label>`
+  ).join('');
+  return `
+    <div class="route-editor">
+      <div class="route-editor-row">
+        <label class="form-label" style="margin-bottom:4px">路線名稱</label>
+        <input type="text" id="route-edit-label" class="edit-text-input" value="${escAttr(label)}"
+          placeholder="例：路線一" autocomplete="off">
+      </div>
+      <div class="route-editor-row">
+        <label class="form-label" style="margin-bottom:4px">包含店家</label>
+        <div class="store-check-grid" id="route-edit-stores">${checkboxes}</div>
+      </div>
+      <div class="route-editor-footer">
+        <button class="btn btn-secondary" onclick="cancelRouteEdit()">取消</button>
+        <button class="btn btn-primary" style="width:auto;padding:7px 16px" onclick="saveRouteEdit(${idx})">儲存</button>
+      </div>
+    </div>`;
+}
+
+function startEditRoute(idx) {
+  routeEditIdx = idx;
+  renderRoutesInModal();
+  setTimeout(() => {
+    document.querySelector('.route-editor')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 50);
+}
+
+function cancelRouteEdit() {
+  routeEditIdx = null;
+  renderRoutesInModal();
+}
+
+function saveRouteEdit(idx) {
+  const label = document.getElementById('route-edit-label')?.value.trim();
+  if (!label) { showToast('請輸入路線名稱', 'error'); return; }
+  const stores = [];
+  document.querySelectorAll('#route-edit-stores input[type=checkbox]:checked').forEach(cb => {
+    stores.push(cb.value);
+  });
+  if (!stores.length) { showToast('請至少選擇一家店', 'error'); return; }
+
+  const routes = state.routes[routeActiveShift];
+  if (idx === -1) {
+    routes.push({ label, stores });
+  } else {
+    routes[idx] = { label, stores };
+  }
+  routeEditIdx = null;
+  persist();
+  populateRouteSelects();
+  renderRoutesInModal();
+  showToast('路線已儲存');
+}
+
+function deleteRoute(idx) {
+  const routes = state.routes[routeActiveShift];
+  if (!confirm(`確定刪除「${routes[idx].label}」？`)) return;
+  routes.splice(idx, 1);
+  if (routeEditIdx === idx) routeEditIdx = null;
+  persist();
+  populateRouteSelects();
+  renderRoutesInModal();
+  showToast('路線已刪除');
+}
+
+function resetDefaultRoutes() {
+  if (!confirm('確定重設為預設路線？自訂路線將被清除。')) return;
+  state.routes = {
+    morning: MORNING_ROUTES.map(r => ({ ...r, stores: [...r.stores] })),
+    evening: EVENING_ROUTES.map(r => ({ ...r, stores: [...r.stores] })),
+  };
+  routeEditIdx = null;
+  persist();
+  populateRouteSelects();
+  renderRoutesInModal();
+  showToast('已重設為預設路線');
 }
 
 // ── Utilities ─────────────────────────────────────────────────────────────────

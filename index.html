@@ -39,6 +39,10 @@
         <button class="btn btn-primary" onclick="generateSchedule()">
           ⚡ 產生排班
         </button>
+        <div class="sidebar-link-row" style="margin-top:4px">
+          <button class="link-btn" onclick="openRoutesModal('morning')">自訂早班路線</button>
+          <button class="link-btn" onclick="openRoutesModal('evening')">自訂晚班路線</button>
+        </div>
       </div>
 
       <!-- ─ 人員管理 ─ -->
@@ -276,6 +280,29 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeStoreNamesModal()">取消</button>
         <button class="btn btn-primary" style="width:auto;padding:7px 20px" onclick="saveStoreNames()">儲存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Routes Modal ───────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="routes-modal">
+  <div class="modal-box modal-box-wide">
+    <div class="modal-header">
+      <h3>路線管理</h3>
+      <button class="btn-modal-close" onclick="closeRoutesModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="route-tabs">
+        <button class="route-tab active" data-shift="morning" onclick="switchRouteTab('morning')">早班路線</button>
+        <button class="route-tab" data-shift="evening" onclick="switchRouteTab('evening')">晚班路線</button>
+      </div>
+      <div id="routes-list"></div>
+      <button class="btn btn-secondary" style="margin-top:8px;width:100%"
+        onclick="startEditRoute(-1)">＋ 新增路線</button>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="resetDefaultRoutes()">重設預設</button>
+        <button class="btn btn-primary" style="width:auto;padding:7px 20px" onclick="closeRoutesModal()">完成</button>
       </div>
     </div>
   </div>
