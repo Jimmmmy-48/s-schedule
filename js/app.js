@@ -120,6 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderSchedule();
   renderStoreAssignment();
   renderStoreCoverage();
+  renderStaffCoverage();
   renderStats();
 
   document.getElementById('staff-input').addEventListener('keydown', e => {
@@ -526,6 +527,7 @@ function generateSchedule() {
     renderSchedule();
     renderStoreAssignment();
     renderStoreCoverage();
+    renderStaffCoverage();
     renderStats();
     switchTab('schedule');
     showToast('排班已產生！');
@@ -541,6 +543,7 @@ function clearSchedule() {
   renderSchedule();
   renderStoreAssignment();
   renderStoreCoverage();
+  renderStaffCoverage();
   renderStats();
 }
 
@@ -1088,6 +1091,99 @@ function renderStoreCoverage() {
             ${dateHeaders}
           </tr></thead>
           <tbody>${tableBody}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ── Render: Staff Coverage Tab ────────────────────────────────────────────────
+function renderStaffCoverage() {
+  const container = document.getElementById('tab-staff-cov');
+  if (!container) return;
+
+  if (!state.schedule || !state.schedule[0]?.storeAssignments) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">👤</div>
+        <p>產生排班後可查看人員一覽</p>
+      </div>`;
+    return;
+  }
+
+  const days = state.schedule;
+
+  // Build: name → dayIdx → { mSched, mStores[], eSched, eStores[] }
+  const staffMap = {};
+  const allNames = new Set(state.staff.map(s => s.name));
+
+  days.forEach((day, di) => {
+    const sa   = day.storeAssignments || {};
+    const mMap = sa.morning || {};
+    const eMap = sa.evening || {};
+
+    day.morning.forEach(name => {
+      allNames.add(name);
+      if (!staffMap[name]) staffMap[name] = {};
+      staffMap[name][di] = staffMap[name][di] || {};
+      staffMap[name][di].mSched  = true;
+      staffMap[name][di].mStores = mMap[name] || [];
+    });
+    day.evening.staff.forEach(name => {
+      allNames.add(name);
+      if (!staffMap[name]) staffMap[name] = {};
+      staffMap[name][di] = staffMap[name][di] || {};
+      staffMap[name][di].eSched  = true;
+      staffMap[name][di].eStores = eMap[name] || [];
+    });
+  });
+
+  const dateHeaders = days.map(day => {
+    const isWeekend = day.dayOfWeek === '六' || day.dayOfWeek === '日';
+    return `<th class="scov-date-th${isWeekend ? ' scov-weekend' : ''}">${formatDateDisplay(day.date)}<br><span class="scov-dow">${day.dayOfWeek}</span></th>`;
+  }).join('');
+
+  const orderedNames = [
+    ...state.staff.map(s => s.name),
+    ...[...allNames].filter(n => !state.staff.find(s => s.name === n)),
+  ];
+
+  const rows = orderedNames.map(name => {
+    const dayData = staffMap[name] || {};
+    const cells = days.map((day, di) => {
+      const d = dayData[di];
+      if (!d || (!d.mSched && !d.eSched)) return `<td class="scov-cell scov-off"></td>`;
+
+      let html = '';
+      if (d.mSched) {
+        html += d.mStores.length
+          ? `<div class="scov-shift scov-shift-m">${escHtml(d.mStores.join('・'))}</div>`
+          : `<div class="scov-shift scov-shift-m scov-nostore">早班</div>`;
+      }
+      if (d.eSched) {
+        html += d.eStores.length
+          ? `<div class="scov-shift scov-shift-e">${escHtml(d.eStores.join('・'))}</div>`
+          : `<div class="scov-shift scov-shift-e scov-nostore">晚班</div>`;
+      }
+      return `<td class="scov-cell">${html}</td>`;
+    }).join('');
+
+    return `<tr><td class="scov-name-col">${escHtml(name)}</td>${cells}</tr>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="scov-wrap">
+      <div class="scov-legend">
+        <span class="scov-shift scov-shift-m" style="display:inline-block;padding:2px 8px">早班</span>
+        <span class="scov-shift scov-shift-e" style="display:inline-block;padding:2px 8px">晚班</span>
+        <span style="font-size:11px;color:var(--text-muted)">格子內顯示當天負責的店家</span>
+      </div>
+      <div class="table-wrap">
+        <table class="scov-table">
+          <thead><tr>
+            <th class="scov-name-th">人員</th>
+            ${dateHeaders}
+          </tr></thead>
+          <tbody>${rows}</tbody>
         </table>
       </div>
     </div>`;
