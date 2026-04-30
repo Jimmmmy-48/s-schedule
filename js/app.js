@@ -1154,37 +1154,36 @@ function renderStaffCoverage() {
     ...[...allNames].filter(n => !state.staff.find(s => s.name === n)),
   ];
 
-  const rows = orderedNames.map(name => {
-    const dayData = staffMap[name] || {};
-    const cells = days.map((day, di) => {
-      const d = dayData[di];
-      if (!d || (!d.mSched && !d.eSched)) return `<td class="scov-cell scov-off"></td>`;
+  const buildTable = (shift) => {
+    const isMorning = shift === 'morning';
+    const schedKey  = isMorning ? 'mSched'  : 'eSched';
+    const storeKey  = isMorning ? 'mStores' : 'eStores';
+    const cellCls   = isMorning ? 'scov-shift-m' : 'scov-shift-e';
+    const noLabel   = isMorning ? '早班' : '晚班';
 
-      let html = '';
-      if (d.mSched) {
-        html += d.mStores.length
-          ? `<div class="scov-shift scov-shift-m">${escHtml(d.mStores.join('・'))}</div>`
-          : `<div class="scov-shift scov-shift-m scov-nostore">早班</div>`;
-      }
-      if (d.eSched) {
-        html += d.eStores.length
-          ? `<div class="scov-shift scov-shift-e">${escHtml(d.eStores.join('・'))}</div>`
-          : `<div class="scov-shift scov-shift-e scov-nostore">晚班</div>`;
-      }
-      return `<td class="scov-cell">${html}</td>`;
+    // Only show staff who have at least one scheduled day in this shift
+    const names = orderedNames.filter(name =>
+      Object.values(staffMap[name] || {}).some(d => d[schedKey])
+    );
+
+    if (!names.length) return '<p style="color:var(--text-muted);font-size:13px;padding:4px 0">本班無排班人員</p>';
+
+    const rows = names.map(name => {
+      const dayData = staffMap[name] || {};
+      const cells = days.map((day, di) => {
+        const d = dayData[di];
+        if (!d?.[schedKey]) return `<td class="scov-cell scov-off"></td>`;
+        const stores = d[storeKey];
+        const content = stores.length
+          ? `<div class="scov-shift ${cellCls}">${escHtml(stores.join('・'))}</div>`
+          : `<div class="scov-shift ${cellCls} scov-nostore">${noLabel}</div>`;
+        return `<td class="scov-cell">${content}</td>`;
+      }).join('');
+      return `<tr><td class="scov-name-col">${escHtml(name)}</td>${cells}</tr>`;
     }).join('');
 
-    return `<tr><td class="scov-name-col">${escHtml(name)}</td>${cells}</tr>`;
-  }).join('');
-
-  container.innerHTML = `
-    <div class="scov-wrap">
-      <div class="scov-legend">
-        <span class="scov-shift scov-shift-m" style="display:inline-block;padding:2px 8px">早班</span>
-        <span class="scov-shift scov-shift-e" style="display:inline-block;padding:2px 8px">晚班</span>
-        <span style="font-size:11px;color:var(--text-muted)">格子內顯示當天負責的店家</span>
-      </div>
-      <div class="table-wrap">
+    return `
+      <div class="table-wrap" style="margin-bottom:24px">
         <table class="scov-table">
           <thead><tr>
             <th class="scov-name-th">人員</th>
@@ -1192,7 +1191,15 @@ function renderStaffCoverage() {
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
-      </div>
+      </div>`;
+  };
+
+  container.innerHTML = `
+    <div class="scov-wrap">
+      <div class="scov-section-title scov-title-m">早班人員一覽</div>
+      ${buildTable('morning')}
+      <div class="scov-section-title scov-title-e">晚班人員一覽</div>
+      ${buildTable('evening')}
     </div>`;
 }
 
