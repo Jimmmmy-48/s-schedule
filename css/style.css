@@ -56,6 +56,12 @@ body {
 
 .app-header h1 { font-size: 18px; font-weight: 700; letter-spacing: 0.03em; }
 .header-sub    { font-size: 12px; opacity: .75; margin-left: 10px; }
+.header-notice {
+  font-size: 11px;
+  opacity: .65;
+  text-align: right;
+  line-height: 1.6;
+}
 
 /* Body: sidebar + content */
 .app-body {
