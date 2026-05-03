@@ -123,6 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderStoreCoverage();
   renderStaffCoverage();
   renderStats();
+  renderGapView();
 
   document.getElementById('staff-tab-search')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') { e.preventDefault(); renderStaffTab(); }
@@ -294,6 +295,7 @@ function removeStaff(index) {
   renderStaffTab();
   renderSchedule();
   renderStats();
+  renderGapView();
 }
 
 function clearAllStaff() {
@@ -304,6 +306,7 @@ function clearAllStaff() {
   renderStaffTab();
   renderSchedule();
   renderStats();
+  renderGapView();
 }
 
 function importSampleStaff() {
@@ -512,6 +515,7 @@ function saveEditStaff() {
   renderStaff();
   renderStaffTab();
   renderStats();
+  renderGapView();
   showToast('人員設定已更新');
 }
 
@@ -538,6 +542,7 @@ function generateSchedule() {
     renderStoreCoverage();
     renderStaffCoverage();
     renderStats();
+  renderGapView();
     switchTab('staff-list');
     showToast('排班已產生！');
   } catch (e) {
@@ -554,6 +559,7 @@ function clearSchedule() {
   renderStoreCoverage();
   renderStaffCoverage();
   renderStats();
+  renderGapView();
 }
 
 // ── Shift Editing ─────────────────────────────────────────────────────────────
@@ -575,6 +581,7 @@ function removeFromShift(dayIndex, shiftType, name) {
   persist();
   renderSchedule();
   renderStats();
+  renderGapView();
 }
 
 function openAddModal(dayIndex, shiftType) {
@@ -616,6 +623,7 @@ function addToShift(name) {
   persist();
   renderSchedule();
   renderStats();
+  renderGapView();
 }
 
 function closeAddModal() {
@@ -809,6 +817,84 @@ function renderSchedule() {
         <tbody>${rows}</tbody>
       </table>
     </div>`;
+}
+
+// ── Render: Gap Overview ──────────────────────────────────────────────────────
+function renderGapView() {
+  const container = document.getElementById('tab-gap');
+  if (!container) return;
+  if (!state.schedule || !state.schedule.length) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>產生排班後可查看每日缺口</p></div>`;
+    return;
+  }
+
+  const DOW = '日一二三四五六';
+
+  const rows = state.schedule.map((day, i) => {
+    const d = new Date(day.date + 'T00:00:00');
+    const dow = DOW[d.getDay()];
+    const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+    const dateLabel = `${day.date.slice(5).replace('-','/')}(${dow})`;
+
+    // ── Orphaned stores (removed from shift but still in storeAssignments) ──
+    const mAssign = day.storeAssignments?.morning || {};
+    const eAssign = day.storeAssignments?.evening || {};
+    const morningSet = new Set(day.morning);
+    const eveningSet = new Set(day.evening.staff);
+
+    const orphanM = Object.entries(mAssign)
+      .filter(([name]) => !morningSet.has(name))
+      .flatMap(([, stores]) => stores);
+    const orphanE = Object.entries(eAssign)
+      .filter(([name]) => !eveningSet.has(name))
+      .flatMap(([, stores]) => stores);
+
+    // ── Unassigned routes (not enough staff for all routes) ──
+    const unassignM = (day.storeAssignments?.morningUnassigned || []).flatMap(r => r.stores);
+    const unassignE = (day.storeAssignments?.eveningUnassigned || []).flatMap(r => r.stores);
+
+    const uncovM = [...orphanM, ...unassignM];
+    const uncovE = [...orphanE, ...unassignE];
+
+    // ── Available staff who are NOT in the shift (potential cover) ──
+    const availM = state.staff.filter(s => {
+      const pref = s.dayShifts?.[i];
+      return (pref === 'morning' || pref === 'both') && !morningSet.has(s.name);
+    });
+    const availE = state.staff.filter(s => {
+      const pref = s.dayShifts?.[i];
+      return (pref === 'evening' || pref === 'both') && !eveningSet.has(s.name);
+    });
+
+    const hasGap = uncovM.length || uncovE.length;
+
+    const storeTag = s => `<span class="gap-store-tag">${escHtml(s)}</span>`;
+    const staffTag = s => `<span class="gap-staff-tag">${escHtml(s.name)}</span>`;
+
+    const mSection = uncovM.length ? `
+      <div class="gap-shift-row">
+        <span class="gap-shift-label gap-label-m">早班</span>
+        <div class="gap-stores">${uncovM.map(storeTag).join('')}</div>
+        ${availM.length ? `<div class="gap-avail">可支援：${availM.map(staffTag).join('')}</div>` : ''}
+      </div>` : '';
+
+    const eSection = uncovE.length ? `
+      <div class="gap-shift-row">
+        <span class="gap-shift-label gap-label-e">晚班</span>
+        <div class="gap-stores">${uncovE.map(storeTag).join('')}</div>
+        ${availE.length ? `<div class="gap-avail">可支援：${availE.map(staffTag).join('')}</div>` : ''}
+      </div>` : '';
+
+    return `
+      <div class="gap-day ${hasGap ? 'gap-day-alert' : 'gap-day-ok'}">
+        <div class="gap-date ${isWeekend ? 'gap-date-weekend' : ''}">${dateLabel}</div>
+        <div class="gap-body">
+          ${hasGap ? mSection + eSection : '<span class="gap-ok-label">✓ 無缺口</span>'}
+        </div>
+      </div>`;
+  });
+
+  container.innerHTML = `<div class="gap-wrap">${rows.join('')}</div>`;
 }
 
 // ── Render: Statistics ────────────────────────────────────────────────────────
@@ -1366,6 +1452,7 @@ function importBackup(input) {
       renderStoreCoverage();
       renderStaffCoverage();
       renderStats();
+  renderGapView();
       showToast(`已匯入 ${state.staff.length} 位人員`);
     } catch (err) {
       showToast('匯入失敗：' + err.message, 'error');
