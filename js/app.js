@@ -857,14 +857,10 @@ function renderGapView() {
     const uncovE = [...orphanE, ...unassignE];
 
     // ── Available staff who are NOT in the shift (potential cover) ──
-    const availM = state.staff.filter(s => {
-      const pref = s.dayShifts?.[i];
-      return (pref === 'morning' || pref === 'both') && !morningSet.has(s.name);
-    });
-    const availE = state.staff.filter(s => {
-      const pref = s.dayShifts?.[i];
-      return (pref === 'evening' || pref === 'both') && !eveningSet.has(s.name);
-    });
+    // Show anyone who has any shift set that day but isn't already in that slot
+    // (includes evening staff who could be asked to cover morning, and vice versa)
+    const availM = state.staff.filter(s => s.dayShifts?.[i] && !morningSet.has(s.name));
+    const availE = state.staff.filter(s => s.dayShifts?.[i] && !eveningSet.has(s.name));
 
     const hasGap = uncovM.length || uncovE.length;
 
@@ -875,14 +871,14 @@ function renderGapView() {
       <div class="gap-shift-row">
         <span class="gap-shift-label gap-label-m">早班</span>
         <div class="gap-stores">${uncovM.map(storeTag).join('')}</div>
-        ${availM.length ? `<div class="gap-avail">可支援：${availM.map(staffTag).join('')}</div>` : ''}
+        ${availM.length ? `<div class="gap-avail">今日有班可詢問：${availM.map(staffTag).join('')}</div>` : ''}
       </div>` : '';
 
     const eSection = uncovE.length ? `
       <div class="gap-shift-row">
         <span class="gap-shift-label gap-label-e">晚班</span>
         <div class="gap-stores">${uncovE.map(storeTag).join('')}</div>
-        ${availE.length ? `<div class="gap-avail">可支援：${availE.map(staffTag).join('')}</div>` : ''}
+        ${availE.length ? `<div class="gap-avail">今日有班可詢問：${availE.map(staffTag).join('')}</div>` : ''}
       </div>` : '';
 
     return `
