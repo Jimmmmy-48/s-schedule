@@ -856,29 +856,41 @@ function renderGapView() {
     const uncovM = [...orphanM, ...unassignM];
     const uncovE = [...orphanE, ...unassignE];
 
-    // ── Available staff who are NOT in the shift (potential cover) ──
-    // Show anyone who has any shift set that day but isn't already in that slot
-    // (includes evening staff who could be asked to cover morning, and vice versa)
-    const availM = state.staff.filter(s => s.dayShifts?.[i] && !morningSet.has(s.name));
-    const availE = state.staff.filter(s => s.dayShifts?.[i] && !eveningSet.has(s.name));
+    // ── Available staff who are NOT in the shift ──
+    // Group 1: correct shift type, can directly cover (usually people manually removed)
+    const directM = state.staff.filter(s => {
+      const p = s.dayShifts?.[i];
+      return (p === 'morning' || p === 'both') && !morningSet.has(s.name);
+    });
+    // Group 2: available that day but only for the other shift — can be asked to adjust
+    const askM = state.staff.filter(s => s.dayShifts?.[i] === 'evening' && !morningSet.has(s.name));
+
+    const directE = state.staff.filter(s => {
+      const p = s.dayShifts?.[i];
+      return (p === 'evening' || p === 'both') && !eveningSet.has(s.name);
+    });
+    const askE = state.staff.filter(s => s.dayShifts?.[i] === 'morning' && !eveningSet.has(s.name));
 
     const hasGap = uncovM.length || uncovE.length;
 
     const storeTag = s => `<span class="gap-store-tag">${escHtml(s)}</span>`;
     const staffTag = s => `<span class="gap-staff-tag">${escHtml(s.name)}</span>`;
+    const askTag   = s => `<span class="gap-staff-tag gap-staff-ask">${escHtml(s.name)}</span>`;
 
     const mSection = uncovM.length ? `
       <div class="gap-shift-row">
         <span class="gap-shift-label gap-label-m">早班</span>
         <div class="gap-stores">${uncovM.map(storeTag).join('')}</div>
-        ${availM.length ? `<div class="gap-avail">今日有班可詢問：${availM.map(staffTag).join('')}</div>` : ''}
+        ${directM.length ? `<div class="gap-avail">可直接支援：${directM.map(staffTag).join('')}</div>` : ''}
+        ${askM.length ? `<div class="gap-avail">今日上晚班（可詢問）：${askM.map(askTag).join('')}</div>` : ''}
       </div>` : '';
 
     const eSection = uncovE.length ? `
       <div class="gap-shift-row">
         <span class="gap-shift-label gap-label-e">晚班</span>
         <div class="gap-stores">${uncovE.map(storeTag).join('')}</div>
-        ${availE.length ? `<div class="gap-avail">今日有班可詢問：${availE.map(staffTag).join('')}</div>` : ''}
+        ${directE.length ? `<div class="gap-avail">可直接支援：${directE.map(staffTag).join('')}</div>` : ''}
+        ${askE.length ? `<div class="gap-avail">今日上早班（可詢問）：${askE.map(askTag).join('')}</div>` : ''}
       </div>` : '';
 
     return `

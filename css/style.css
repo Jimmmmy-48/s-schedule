@@ -1767,3 +1767,8 @@ tr:hover .scov-off { background-color: #f1f5f9; }
   border-radius: 3px;
   border: 1px solid #bbf7d0;
 }
+.gap-staff-ask {
+  background: #fafafa;
+  color: #6b7280;
+  border-color: #e5e7eb;
+}
