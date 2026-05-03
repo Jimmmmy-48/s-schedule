@@ -575,13 +575,62 @@ function removeFromShift(dayIndex, shiftType, name) {
   const day = state.schedule[dayIndex];
   if (shiftType === 'morning') {
     day.morning = day.morning.filter(s => s !== name);
+    if (day.morningLeaves) day.morningLeaves = day.morningLeaves.filter(s => s !== name);
   } else {
     day.evening.staff = day.evening.staff.filter(s => s !== name);
+    if (day.eveningLeaves) day.eveningLeaves = day.eveningLeaves.filter(s => s !== name);
   }
   persist();
   renderSchedule();
   renderStats();
   renderGapView();
+}
+
+function markLeave(dayIndex, shiftType, name) {
+  if (!confirm(`將「${name}」標記為當天請假，並自動把他的店分給其他人？`)) return;
+  const day = state.schedule[dayIndex];
+
+  // Record leave
+  if (shiftType === 'morning') {
+    if (!day.morningLeaves) day.morningLeaves = [];
+    if (!day.morningLeaves.includes(name)) day.morningLeaves.push(name);
+    day.morning = day.morning.filter(s => s !== name);
+  } else {
+    if (!day.eveningLeaves) day.eveningLeaves = [];
+    if (!day.eveningLeaves.includes(name)) day.eveningLeaves.push(name);
+    day.evening.staff = day.evening.staff.filter(s => s !== name);
+  }
+
+  // Redistribute this person's stores among remaining staff
+  _redistributeStores(day, shiftType, name);
+
+  persist();
+  renderSchedule();
+  renderStoreAssignment();
+  renderStoreCoverage();
+  renderStaffCoverage();
+  renderStats();
+  renderGapView();
+}
+
+function _redistributeStores(day, shiftType, leavingName) {
+  const assignKey = shiftType === 'morning' ? 'morning' : 'evening';
+  const staffList  = shiftType === 'morning' ? day.morning : day.evening.staff;
+  const assignments = day.storeAssignments?.[assignKey];
+  if (!assignments) return;
+
+  const orphaned = assignments[leavingName] || [];
+  delete assignments[leavingName];
+  if (!orphaned.length || !staffList.length) return;
+
+  // Build list sorted by current store count (fewest first)
+  const counts = staffList.map(n => ({ name: n, stores: assignments[n] || [] }));
+  orphaned.forEach(store => {
+    counts.sort((a, b) => a.stores.length - b.stores.length);
+    counts[0].stores.push(store);
+    if (!assignments[counts[0].name]) assignments[counts[0].name] = [];
+    assignments[counts[0].name].push(store);
+  });
 }
 
 function openAddModal(dayIndex, shiftType) {
@@ -757,12 +806,19 @@ function renderSchedule() {
   const rows = state.schedule.map((day, i) => {
     const isWeekend = day.dayOfWeek === '六' || day.dayOfWeek === '日';
 
-    const morningTags = day.morning.map(s =>
-      `<span class="tag tag-morning" onclick="removeFromShift(${i},'morning','${escAttr(s)}')" title="點擊移除">${escHtml(s)}</span>`
-    ).join('');
-    const eveningTags = day.evening.staff.map(s =>
-      `<span class="tag tag-evening" onclick="removeFromShift(${i},'evening','${escAttr(s)}')" title="點擊移除">${escHtml(s)}</span>`
-    ).join('');
+    const makeTag = (s, shift, color) => `
+      <span class="tag tag-${color} tag-with-actions">
+        <span class="tag-name">${escHtml(s)}</span>
+        <button class="tag-btn-leave" onclick="markLeave(${i},'${shift}','${escAttr(s)}')" title="請假（自動轉移店家）">假</button>
+        <button class="tag-btn-remove" onclick="removeFromShift(${i},'${shift}','${escAttr(s)}')" title="移除">×</button>
+      </span>`;
+    const makeLeaveTag = s =>
+      `<span class="tag tag-leave" title="請假">${escHtml(s)} 假</span>`;
+
+    const morningLeaves = (day.morningLeaves || []).map(makeLeaveTag).join('');
+    const eveningLeaves = (day.eveningLeaves || []).map(makeLeaveTag).join('');
+    const morningTags = day.morning.map(s => makeTag(s, 'morning', 'morning')).join('');
+    const eveningTags = day.evening.staff.map(s => makeTag(s, 'evening', 'evening')).join('');
 
     const morningBadge = `<span class="shift-badge">${day.morning.length} 人</span>`;
     const eveningBadge = `<span class="shift-badge">${day.evening.staff.length} 人</span>`;
@@ -779,7 +835,7 @@ function renderSchedule() {
             早班 08:00–12:00 ${morningBadge}
           </div>
           <div class="tags-wrap">
-            ${morningTags}
+            ${morningTags}${morningLeaves}
             <button class="btn-add-tag" onclick="openAddModal(${i},'morning')" title="新增人員">＋</button>
           </div>
         </td>
@@ -789,7 +845,7 @@ function renderSchedule() {
             ${eveningBadge}
           </div>
           <div class="tags-wrap">
-            ${eveningTags}
+            ${eveningTags}${eveningLeaves}
             <button class="btn-add-tag" onclick="openAddModal(${i},'evening')" title="新增人員">＋</button>
           </div>
         </td>
@@ -841,12 +897,15 @@ function renderGapView() {
     const eAssign = day.storeAssignments?.evening || {};
     const morningSet = new Set(day.morning);
     const eveningSet = new Set(day.evening.staff);
+    const leaveSetM = new Set(day.morningLeaves || []);
+    const leaveSetE = new Set(day.eveningLeaves || []);
 
+    // Exclude people on leave (their stores were already redistributed)
     const orphanM = Object.entries(mAssign)
-      .filter(([name]) => !morningSet.has(name))
+      .filter(([name]) => !morningSet.has(name) && !leaveSetM.has(name))
       .flatMap(([, stores]) => stores);
     const orphanE = Object.entries(eAssign)
-      .filter(([name]) => !eveningSet.has(name))
+      .filter(([name]) => !eveningSet.has(name) && !leaveSetE.has(name))
       .flatMap(([, stores]) => stores);
 
     // ── Unassigned routes (not enough staff for all routes) ──
