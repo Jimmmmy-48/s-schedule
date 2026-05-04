@@ -528,6 +528,12 @@ function closeEditStaffModal() {
 function generateSchedule() {
   const dateVal = document.getElementById('start-date').value;
   if (!dateVal) { showToast('請選擇開始日期', 'error'); return; }
+
+  const hasExisting = state.schedule && state.schedule.length > 0;
+  if (hasExisting) {
+    if (!confirm('重新產生班表將覆蓋目前所有排班（包含手動調整和請假記錄），確定繼續？')) return;
+  }
+
   state.startDate = dateVal;
 
   try {
