@@ -542,18 +542,98 @@ function generateSchedule() {
       morningRoutes: state.routes.morning,
       eveningRoutes: state.routes.evening,
     });
+
+    const issues = _validateAndFixSchedule();
     persist();
     renderSchedule();
     renderStoreAssignment();
     renderStoreCoverage();
     renderStaffCoverage();
     renderStats();
-  renderGapView();
+    renderGapView();
     switchTab('staff-list');
-    showToast('排班已產生！');
+
+    if (issues.length) {
+      showToast(`班表已產生，自動修正 ${issues.length} 項問題`, 'warning');
+    } else {
+      showToast('排班已產生！');
+    }
   } catch (e) {
     showToast(e.message, 'error');
   }
+}
+
+function _validateAndFixSchedule() {
+  const issues = [];
+  if (!state.schedule) return issues;
+
+  const staffMap = {};
+  state.staff.forEach(s => { staffMap[s.name] = s; });
+
+  state.schedule.forEach((day, i) => {
+    // ── 1. Remove duplicates ──
+    const mBefore = day.morning.length;
+    day.morning = [...new Set(day.morning)];
+    if (day.morning.length < mBefore)
+      issues.push(`${day.date} 早班：移除重複人員`);
+
+    const eBefore = day.evening.staff.length;
+    day.evening.staff = [...new Set(day.evening.staff)];
+    if (day.evening.staff.length < eBefore)
+      issues.push(`${day.date} 晚班：移除重複人員`);
+
+    // ── 2. Remove people who can't work that day/shift ──
+    const removedM = [];
+    day.morning = day.morning.filter(name => {
+      const s = staffMap[name];
+      if (!s) { removedM.push(name); return false; }
+      const pref = s.dayShifts?.[i];
+      const ok = pref === 'morning' || pref === 'both';
+      if (!ok) removedM.push(name);
+      return ok;
+    });
+    if (removedM.length)
+      issues.push(`${day.date} 早班：移除不可排班人員（${removedM.join('、')}）`);
+
+    const removedE = [];
+    day.evening.staff = day.evening.staff.filter(name => {
+      const s = staffMap[name];
+      if (!s) { removedE.push(name); return false; }
+      const pref = s.dayShifts?.[i];
+      const ok = pref === 'evening' || pref === 'both';
+      if (!ok) removedE.push(name);
+      return ok;
+    });
+    if (removedE.length)
+      issues.push(`${day.date} 晚班：移除不可排班人員（${removedE.join('、')}）`);
+
+    // ── 3. Clean up storeAssignments to match actual shift staff ──
+    if (day.storeAssignments) {
+      const mSet = new Set(day.morning);
+      const eSet = new Set(day.evening.staff);
+      const leaveM = new Set(day.morningLeaves || []);
+      const leaveE = new Set(day.eveningLeaves || []);
+
+      if (day.storeAssignments.morning) {
+        Object.keys(day.storeAssignments.morning).forEach(name => {
+          if (!mSet.has(name) && !leaveM.has(name)) {
+            delete day.storeAssignments.morning[name];
+            issues.push(`${day.date} 早班：移除店家分配中的無效人員（${name}）`);
+          }
+        });
+      }
+      if (day.storeAssignments.evening) {
+        Object.keys(day.storeAssignments.evening).forEach(name => {
+          if (!eSet.has(name) && !leaveE.has(name)) {
+            delete day.storeAssignments.evening[name];
+            issues.push(`${day.date} 晚班：移除店家分配中的無效人員（${name}）`);
+          }
+        });
+      }
+    }
+  });
+
+  return issues;
 }
 
 function clearSchedule() {
