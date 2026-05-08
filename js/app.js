@@ -794,6 +794,106 @@ function exportCSV() {
 
 function printSchedule() { window.print(); }
 
+function exportExcel() {
+  if (!state.schedule) { showToast('尚無排班可匯出', 'error'); return; }
+
+  const wb = XLSX.utils.book_new();
+
+  // ── Sheet 1: 排班表 ──────────────────────────────────────────────────────────
+  const schedRows = [['日期', '星期', '早班人數', '早班人員', '晚班人數', '晚班人員', '晚班結束時間']];
+  state.schedule.forEach(day => {
+    schedRows.push([
+      day.date,
+      day.dayOfWeek,
+      day.morning.length,
+      day.morning.join('、'),
+      day.evening.staff.length,
+      day.evening.staff.join('、'),
+      day.evening.endTime,
+    ]);
+  });
+  const ws1 = XLSX.utils.aoa_to_sheet(schedRows);
+  ws1['!cols'] = [{ wch: 12 }, { wch: 4 }, { wch: 6 }, { wch: 40 }, { wch: 6 }, { wch: 40 }, { wch: 10 }];
+  XLSX.utils.book_append_sheet(wb, ws1, '排班表');
+
+  // ── Sheet 2: 人員班表 ────────────────────────────────────────────────────────
+  // Columns: 姓名, Day1, Day2, ..., Day14, 早班次, 晚班次, 總班次
+  const dateHeaders = state.schedule.map(d => `${d.date}\n(${d.dayOfWeek})`);
+  const staffHeader = ['姓名', ...dateHeaders, '早班次', '晚班次', '總班次'];
+  const staffRows   = [staffHeader];
+
+  const morningSet = {};
+  const eveningSet = {};
+  state.schedule.forEach((day, di) => {
+    day.morning.forEach(n => {
+      if (!morningSet[n]) morningSet[n] = new Set();
+      morningSet[n].add(di);
+    });
+    day.evening.staff.forEach(n => {
+      if (!eveningSet[n]) eveningSet[n] = new Set();
+      eveningSet[n].add(di);
+    });
+  });
+
+  const allNames = [...new Set([
+    ...Object.keys(morningSet),
+    ...Object.keys(eveningSet),
+    ...state.staff.map(s => s.name),
+  ])];
+
+  allNames.forEach(name => {
+    const cells = state.schedule.map((day, di) => {
+      const inM = (morningSet[name] || new Set()).has(di);
+      const inE = (eveningSet[name] || new Set()).has(di);
+      const leaves = [...(day.morningLeaves || []), ...(day.eveningLeaves || [])];
+      const isLeave = leaves.includes(name);
+      if (isLeave) return '假';
+      if (inM && inE) return '早晚';
+      if (inM) return '早';
+      if (inE) return '晚';
+      return '';
+    });
+    const mCnt = (morningSet[name] || new Set()).size;
+    const eCnt = (eveningSet[name] || new Set()).size;
+    staffRows.push([name, ...cells, mCnt, eCnt, mCnt + eCnt]);
+  });
+
+  const ws2 = XLSX.utils.aoa_to_sheet(staffRows);
+  const staffCols = [{ wch: 8 }, ...state.schedule.map(() => ({ wch: 12 })), { wch: 6 }, { wch: 6 }, { wch: 6 }];
+  ws2['!cols'] = staffCols;
+  XLSX.utils.book_append_sheet(wb, ws2, '人員班表');
+
+  // ── Sheet 3: 店家分配（有 storeAssignments 才加）────────────────────────────
+  if (state.schedule[0]?.storeAssignments) {
+    const saRows = [['日期', '星期', '班別', '人員', '路線', '負責店家']];
+    state.schedule.forEach(day => {
+      const sa = day.storeAssignments;
+      const mRI = sa.morningRouteInfo || {};
+      const eRI = sa.eveningRouteInfo || {};
+
+      Object.entries(sa.morning || {}).forEach(([name, stores]) => {
+        saRows.push([day.date, day.dayOfWeek, '早班', name, mRI[name]?.label || '', stores.join('、')]);
+      });
+      (sa.morningUnassigned || []).forEach(rt => {
+        saRows.push([day.date, day.dayOfWeek, '早班', '(缺人)', rt.label, rt.stores.join('、')]);
+      });
+      Object.entries(sa.evening || {}).forEach(([name, stores]) => {
+        saRows.push([day.date, day.dayOfWeek, '晚班', name, eRI[name]?.label || '', stores.join('、')]);
+      });
+      (sa.eveningUnassigned || []).forEach(rt => {
+        saRows.push([day.date, day.dayOfWeek, '晚班', '(缺人)', rt.label, rt.stores.join('、')]);
+      });
+    });
+
+    const ws3 = XLSX.utils.aoa_to_sheet(saRows);
+    ws3['!cols'] = [{ wch: 12 }, { wch: 4 }, { wch: 4 }, { wch: 8 }, { wch: 10 }, { wch: 50 }];
+    XLSX.utils.book_append_sheet(wb, ws3, '店家分配');
+  }
+
+  XLSX.writeFile(wb, `排班表_${state.startDate || 'export'}.xlsx`);
+  showToast('Excel 已下載');
+}
+
 // ── Render: Staff List ────────────────────────────────────────────────────────
 function renderStaff() {
   const listEl  = document.getElementById('staff-list');
@@ -943,6 +1043,7 @@ function renderSchedule() {
       <span class="schedule-period">📆 排班期間：${periodStart} ～ ${periodEnd}（14 天）</span>
       <div class="schedule-actions">
         <button class="btn btn-secondary" onclick="exportCSV()">匯出 CSV</button>
+        <button class="btn btn-secondary" onclick="exportExcel()">匯出 Excel</button>
         <button class="btn btn-secondary" onclick="printSchedule()">列印</button>
         <button class="btn btn-danger-outline" onclick="clearSchedule()">清除排班</button>
       </div>
